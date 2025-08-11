@@ -42,19 +42,18 @@ function Login() {
         setIsLoading(true);
         
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // For demo purposes, accept any valid email/password
-            if (formData.email && formData.password) {
-                login({
-                    email: formData.email,
-                    name: formData.email.split('@')[0]
-                });
-                navigate('/');
-            }
+            // Call the actual login API
+            await login({
+                email: formData.email,
+                password: formData.password
+            });
+            navigate('/');
         } catch (error) {
             console.error('Login error:', error);
+            // Show error to user
+            setErrors({
+                general: error.message || 'Login failed. Please try again.'
+            });
         } finally {
             setIsLoading(false);
         }
@@ -124,6 +123,12 @@ function Login() {
                             <p className="text-red-400 text-sm mt-1">{errors.password}</p>
                         )}
                     </div>
+
+                    {errors.general && (
+                        <div className="bg-red-900/50 border border-red-500 text-red-400 px-4 py-3 rounded-lg">
+                            <p className="text-sm">{errors.general}</p>
+                        </div>
+                    )}
 
                     <button
                         type="submit"

@@ -36,10 +36,20 @@ export const AppProvider = ({ children }) => {
                     setMonthlyIncome(response.data.user.monthlyIncome || 0);
                 } catch (error) {
                     console.error('Auth check failed:', error);
-                    apiService.logout();
+                    // Clear invalid token and reset auth state
+                    apiService.removeToken();
                     setIsLoggedIn(false);
                     setUser(null);
+                    setAnnualIncome(0);
+                    setMonthlyIncome(0);
+                    setError(null); // Clear any previous errors
                 }
+            } else {
+                // No token found, ensure auth state is reset
+                setIsLoggedIn(false);
+                setUser(null);
+                setAnnualIncome(0);
+                setMonthlyIncome(0);
             }
         };
 
@@ -105,7 +115,15 @@ export const AppProvider = ({ children }) => {
         setLoading(true);
         setError(null);
         try {
-            const response = await apiService.register(userData);
+            // Map fullName to name for backend compatibility
+            const backendUserData = {
+                ...userData,
+                name: userData.fullName || userData.name
+            };
+            // Remove fullName to avoid confusion
+            delete backendUserData.fullName;
+            
+            const response = await apiService.register(backendUserData);
             setUser(response.data.user);
             setIsLoggedIn(true);
             setAnnualIncome(response.data.user.annualIncome || 0);
