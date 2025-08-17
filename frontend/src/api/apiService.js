@@ -1,6 +1,3 @@
-// API Service for PlanPocket
-// This file handles all API calls to the backend
-
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api';
 
 class ApiService {
@@ -8,7 +5,6 @@ class ApiService {
         this.baseURL = API_BASE_URL;
     }
 
-    // Helper method to get auth headers
     getAuthHeaders() {
         const token = localStorage.getItem('authToken');
         return {
@@ -17,7 +13,6 @@ class ApiService {
         };
     }
 
-    // Generic request method
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
         const config = {
@@ -40,7 +35,7 @@ class ApiService {
         }
     }
 
-    // Authentication APIs
+    // ---------- AUTH ----------
     async register(userData) {
         return this.request('/auth/register', {
             method: 'POST',
@@ -54,8 +49,8 @@ class ApiService {
             body: JSON.stringify(credentials)
         });
 
-        if (response.data?.token) {
-            localStorage.setItem('authToken', response.data.token);
+        if (response?.token) {
+            localStorage.setItem('authToken', response.token);
         }
 
         return response;
@@ -66,7 +61,7 @@ class ApiService {
     }
 
     async getCurrentUser() {
-        return this.request('/auth/profile');
+        return this.request('/auth/me');   // ✅ fixed
     }
 
     async updateProfile(profileData) {
@@ -83,7 +78,7 @@ class ApiService {
         });
     }
 
-    // User APIs
+    // ---------- USER ----------
     async updateIncome(incomeData) {
         return this.request('/user/income', {
             method: 'PUT',
@@ -95,10 +90,10 @@ class ApiService {
         return this.request('/user/dashboard');
     }
 
-    // Transaction APIs
+    // ---------- TRANSACTIONS ----------
     async getTransactions(params = {}) {
         const queryString = new URLSearchParams(params).toString();
-        return this.request(`/transactions?${queryString}`);
+        return this.request(`/transactions${queryString ? `?${queryString}` : ''}`);
     }
 
     async createTransaction(transactionData) {
@@ -129,10 +124,10 @@ class ApiService {
         return this.request('/transactions/stats/summary');
     }
 
-    // Loan APIs
+    // ---------- LOANS ----------
     async getLoans(params = {}) {
         const queryString = new URLSearchParams(params).toString();
-        return this.request(`/loans?${queryString}`);
+        return this.request(`/loans${queryString ? `?${queryString}` : ''}`);
     }
 
     async createLoan(loanData) {
@@ -170,7 +165,7 @@ class ApiService {
         return this.request('/loans/stats/summary');
     }
 
-    // Summary APIs
+    // ---------- SUMMARY ----------
     async getFinancialSummary() {
         return this.request('/summary');
     }
@@ -183,7 +178,7 @@ class ApiService {
         return this.request('/summary/trends');
     }
 
-    // Utility methods
+    // ---------- UTILS ----------
     isAuthenticated() {
         return !!localStorage.getItem('authToken');
     }
@@ -201,6 +196,5 @@ class ApiService {
     }
 }
 
-// Create and export a singleton instance
 const apiService = new ApiService();
 export default apiService;
