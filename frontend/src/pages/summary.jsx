@@ -5,9 +5,9 @@ import { FaChartPie, FaMoneyBillWave, FaCreditCard, FaArrowLeft, FaChartLine, Fa
 
 function Summary() {
     const { 
-        financialMetrics,
-        loans, 
-        transactions,
+        financialMetrics = {},
+        loans = [], 
+        transactions = [],
         loading,
         error
     } = useAppContext();
@@ -148,7 +148,7 @@ function Summary() {
                         <div className="text-center">
                             <h3 className="text-gray-300 text-sm mb-2">Monthly Savings Rate</h3>
                             <p className="text-2xl font-bold text-white">
-                                {financialMetrics.monthlySavingsRate.toFixed(1)}%
+                                {(financialMetrics.monthlySavingsRate || 0).toFixed(1)}%
                             </p>
                         </div>
                         
