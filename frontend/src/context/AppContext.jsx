@@ -1,344 +1,392 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+// src/context/AppContext.jsx
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import apiService from '../api/apiService';
 
 const AppContext = createContext();
 
 export const useAppContext = () => {
-    const context = useContext(AppContext);
-    if (!context) {
-        throw new Error('useAppContext must be used within an AppProvider');
-    }
-    return context;
+  const context = useContext(AppContext);
+  if (!context) throw new Error('useAppContext must be used within an AppProvider');
+  return context;
 };
 
 export const AppProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [annualIncome, setAnnualIncome] = useState(0);
-    const [monthlyIncome, setMonthlyIncome] = useState(0);
-    const [transactions, setTransactions] = useState([]);
-    const [loans, setLoans] = useState([]);
-    const [budgetUsed, setBudgetUsed] = useState(0);
-    const [totalExpenses, setTotalExpenses] = useState(0);
-    const [remaining, setRemaining] = useState(0);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+  // --- state ---
+  const [user, setUser] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [annualIncome, setAnnualIncome] = useState(0);
+  const [monthlyIncome, setMonthlyIncome] = useState(0);
+  const [transactions, setTransactions] = useState([]);
+  const [loans, setLoans] = useState([]);
+  const [budgetUsed, setBudgetUsed] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+  const [remaining, setRemaining] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-    // Check authentication status on app load
-    useEffect(() => {
-        const checkAuth = async () => {
-            if (apiService.isAuthenticated()) {
-                try {
-                    const response = await apiService.getCurrentUser();
-                    setUser(response.data.user);
-                    setIsLoggedIn(true);
-                    setAnnualIncome(response.data.user.annualIncome || 0);
-                    setMonthlyIncome(response.data.user.monthlyIncome || 0);
-                } catch (error) {
-                    console.error('Auth check failed:', error);
-                    // Clear invalid token and reset auth state
-                    apiService.removeToken();
-                    setIsLoggedIn(false);
-                    setUser(null);
-                    setAnnualIncome(0);
-                    setMonthlyIncome(0);
-                    setError(null); // Clear any previous errors
-                }
-            } else {
-                // No token found, ensure auth state is reset
-                setIsLoggedIn(false);
-                setUser(null);
-                setAnnualIncome(0);
-                setMonthlyIncome(0);
-            }
-        };
+  // Helper to extract friendly message from error objects
+  const getErrorMessage = (err) => {
+    // axios style
+    if (!err) return 'Unknown error';
+    if (err.response?.data?.message) return err.response.data.message;
+    if (err.message) return err.message;
+    return String(err);
+  };
 
-        checkAuth();
-    }, []);
-
-    // Load initial data when user logs in
-    useEffect(() => {
-        if (isLoggedIn) {
-            loadDashboardData();
-        }
-    }, [isLoggedIn]);
-
-    const loadDashboardData = async () => {
-        setLoading(true);
+  // --- Auth check on load ---
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (apiService.isAuthenticated && apiService.isAuthenticated()) {
         try {
-            // Load transactions
-            const transactionsResponse = await apiService.getTransactions({ limit: 10 });
-            setTransactions(transactionsResponse.data.transactions || []);
-
-            // Load loans
-            const loansResponse = await apiService.getLoans();
-            setLoans(loansResponse.data.loans || []);
-
-            // Load transaction stats
-            const statsResponse = await apiService.getTransactionStats();
-            const stats = statsResponse.data;
-            setTotalExpenses(stats.monthlyExpenses || 0);
-            setBudgetUsed(stats.budgetUsed || 0);
-            setRemaining(stats.remainingBudget || 0);
-
-        } catch (error) {
-            console.error('Failed to load dashboard data:', error);
-            setError(error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const login = async (credentials) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await apiService.login(credentials);
-            setUser(response.data.user);
+          setLoading(true);
+          const resp = await apiService.getCurrentUser();
+          const fetchedUser = resp?.data?.user ?? null;
+          if (fetchedUser) {
+            setUser(fetchedUser);
             setIsLoggedIn(true);
-            setAnnualIncome(response.data.user.annualIncome || 0);
-            setMonthlyIncome(response.data.user.monthlyIncome || 0);
-            
-            // Load user data
-            await loadDashboardData();
-            
-            return response;
-        } catch (error) {
-            setError(error.message);
-            throw error;
+            setAnnualIncome(fetchedUser.annualIncome || 0);
+            setMonthlyIncome(fetchedUser.monthlyIncome || 0);
+          } else {
+            // If token exists but profile couldn't be fetched, clear token
+            apiService.removeToken && apiService.removeToken();
+            setUser(null);
+            setIsLoggedIn(false);
+          }
+        } catch (err) {
+          console.error('Auth check failed:', err);
+          apiService.removeToken && apiService.removeToken();
+          setUser(null);
+          setIsLoggedIn(false);
+          setError(null); // keep initial state clean
         } finally {
-            setLoading(false);
+          setLoading(false);
         }
-    };
-
-    const register = async (userData) => {
-        setLoading(true);
-        setError(null);
-        try {
-            // Map fullName to name for backend compatibility
-            const backendUserData = {
-                ...userData,
-                name: userData.fullName || userData.name
-            };
-            // Remove fullName to avoid confusion
-            delete backendUserData.fullName;
-            
-            const response = await apiService.register(backendUserData);
-            setUser(response.data.user);
-            setIsLoggedIn(true);
-            setAnnualIncome(response.data.user.annualIncome || 0);
-            setMonthlyIncome(response.data.user.monthlyIncome || 0);
-            
-            return response;
-        } catch (error) {
-            setError(error.message);
-            throw error;
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const logout = () => {
-        apiService.logout();
+      } else {
+        // No token found; ensure clean state
         setUser(null);
         setIsLoggedIn(false);
-        setAnnualIncome(0);
-        setMonthlyIncome(0);
-        setTransactions([]);
-        setLoans([]);
-        setBudgetUsed(0);
-        setTotalExpenses(0);
-        setRemaining(0);
-        setError(null);
+      }
     };
 
-    const updateIncome = async (income) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await apiService.updateIncome({ annualIncome: income });
-            setAnnualIncome(income);
-            setMonthlyIncome(response.data.user.monthlyIncome);
-            return response;
-        } catch (error) {
-            setError(error.message);
-            throw error;
-        } finally {
-            setLoading(false);
-        }
-    };
+    checkAuth();
+    // run once on mount
+  }, []);
 
-    const addTransaction = async (transactionData) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await apiService.createTransaction(transactionData);
-            const newTransaction = response.data.transaction;
-            setTransactions(prev => [newTransaction, ...prev]);
-            
-            // Update stats
-            await loadDashboardData();
-            
-            return response;
-        } catch (error) {
-            setError(error.message);
-            throw error;
-        } finally {
-            setLoading(false);
-        }
-    };
+  // --- Load dashboard --- (memoized)
+  const loadDashboardData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Transactions
+      const transactionsResponse = await apiService.getTransactions?.({ limit: 10 }) ?? { data: { transactions: [] } };
+      setTransactions(transactionsResponse.data?.transactions ?? []);
 
-    const updateTransaction = async (id, transactionData) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await apiService.updateTransaction(id, transactionData);
-            setTransactions(prev => 
-                prev.map(t => t._id === id ? response.data.transaction : t)
-            );
-            
-            // Update stats
-            await loadDashboardData();
-            
-            return response;
-        } catch (error) {
-            setError(error.message);
-            throw error;
-        } finally {
-            setLoading(false);
-        }
-    };
+      // Loans
+      const loansResponse = await apiService.getLoans?.() ?? { data: { loans: [] } };
+      setLoans(loansResponse.data?.loans ?? []);
 
-    const deleteTransaction = async (id) => {
-        setLoading(true);
-        setError(null);
-        try {
-            await apiService.deleteTransaction(id);
-            setTransactions(prev => prev.filter(t => t._id !== id));
-            
-            // Update stats
-            await loadDashboardData();
-        } catch (error) {
-            setError(error.message);
-            throw error;
-        } finally {
-            setLoading(false);
-        }
-    };
+      // Stats
+      const statsResponse = await apiService.getTransactionStats?.() ?? { data: {} };
+      const stats = statsResponse.data ?? {};
+      setTotalExpenses(stats.monthlyExpenses ?? 0);
+      setBudgetUsed(stats.budgetUsed ?? 0);
+      setRemaining(stats.remainingBudget ?? 0);
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-    const addLoan = async (loanData) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await apiService.createLoan(loanData);
-            const newLoan = response.data.loan;
-            setLoans(prev => [newLoan, ...prev]);
-            return response;
-        } catch (error) {
-            setError(error.message);
-            throw error;
-        } finally {
-            setLoading(false);
-        }
-    };
+  // When user logs in, load dashboard
+  useEffect(() => {
+    if (isLoggedIn) loadDashboardData();
+  }, [isLoggedIn, loadDashboardData]);
 
-    const updateLoan = async (id, loanData) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await apiService.updateLoan(id, loanData);
-            setLoans(prev => 
-                prev.map(l => l._id === id ? response.data.loan : l)
-            );
-            return response;
-        } catch (error) {
-            setError(error.message);
-            throw error;
-        } finally {
-            setLoading(false);
-        }
-    };
+  // --- Auth actions ---
+  const login = async (credentials) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const resp = await apiService.login(credentials);
+      const data = resp?.data ?? {};
 
-    const deleteLoan = async (id) => {
-        setLoading(true);
-        setError(null);
-        try {
-            await apiService.deleteLoan(id);
-            setLoans(prev => prev.filter(l => l._id !== id));
-        } catch (error) {
-            setError(error.message);
-            throw error;
-        } finally {
-            setLoading(false);
-        }
-    };
+      // If backend sent user in the response, use it
+      if (data.user) {
+        setUser(data.user);
+      } else if (data.token) {
+        // If only token was returned, fetch profile
+        const profileResp = await apiService.getCurrentUser();
+        setUser(profileResp?.data?.user ?? null);
+      }
 
-    const calculateEMI = async (emiData) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await apiService.calculateEMI(emiData);
-            return response;
-        } catch (error) {
-            setError(error.message);
-            throw error;
-        } finally {
-            setLoading(false);
-        }
-    };
+      setIsLoggedIn(true);
 
-    const getFinancialSummary = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await apiService.getFinancialSummary();
-            return response;
-        } catch (error) {
-            setError(error.message);
-            throw error;
-        } finally {
-            setLoading(false);
-        }
-    };
+      const finalUser = data.user ?? (await apiService.getCurrentUser()).data?.user ?? null;
+      setAnnualIncome(finalUser?.annualIncome ?? 0);
+      setMonthlyIncome(finalUser?.monthlyIncome ?? 0);
 
-    const clearError = () => {
-        setError(null);
-    };
+      // Load dashboard data
+      await loadDashboardData();
 
-    const value = {
-        // State
-        user,
-        isLoggedIn,
-        annualIncome,
-        monthlyIncome,
-        transactions,
-        loans,
-        budgetUsed,
-        totalExpenses,
-        remaining,
-        loading,
-        error,
+      return resp;
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      setIsLoggedIn(false);
+      setUser(null);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        // Actions
-        login,
-        register,
-        logout,
-        updateIncome,
-        addTransaction,
-        updateTransaction,
-        deleteTransaction,
-        addLoan,
-        updateLoan,
-        deleteLoan,
-        calculateEMI,
-        getFinancialSummary,
-        loadDashboardData,
-        clearError
-    };
+  const register = async (userData) => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Map fullName -> name (backend compatibility)
+      const backendUserData = { ...userData };
+      if (backendUserData.fullName && !backendUserData.name) {
+        backendUserData.name = backendUserData.fullName;
+        delete backendUserData.fullName;
+      }
 
-    return (
-        <AppContext.Provider value={value}>
-            {children}
-        </AppContext.Provider>
-    );
+      const resp = await apiService.register(backendUserData);
+      const data = resp?.data ?? {};
+
+      if (data.user) {
+        setUser(data.user);
+      } else if (data.token) {
+        const profileResp = await apiService.getCurrentUser();
+        setUser(profileResp?.data?.user ?? null);
+      }
+
+      setIsLoggedIn(true);
+
+      const finalUser = data.user ?? (await apiService.getCurrentUser()).data?.user ?? null;
+      setAnnualIncome(finalUser?.annualIncome ?? 0);
+      setMonthlyIncome(finalUser?.monthlyIncome ?? 0);
+
+      return resp;
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    apiService.logout?.();
+    apiService.removeToken?.();
+    setUser(null);
+    setIsLoggedIn(false);
+    setAnnualIncome(0);
+    setMonthlyIncome(0);
+    setTransactions([]);
+    setLoans([]);
+    setBudgetUsed(0);
+    setTotalExpenses(0);
+    setRemaining(0);
+    setError(null);
+  };
+
+  // --- Profile / income update ---
+  const updateIncome = async (income) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiService.updateIncome?.({ annualIncome: income });
+      // If API returns updated user, use it; else compute monthly
+      const updatedUser = response?.data?.user ?? null;
+      if (updatedUser) {
+        setUser(updatedUser);
+        setAnnualIncome(updatedUser.annualIncome ?? income);
+        setMonthlyIncome(updatedUser.monthlyIncome ?? Math.round((updatedUser.annualIncome ?? income) / 12));
+      } else {
+        setAnnualIncome(income);
+        setMonthlyIncome(Math.round(income / 12));
+      }
+      return response;
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Transaction actions ---
+  const addTransaction = async (transactionData) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiService.createTransaction(transactionData);
+      const newTransaction = response?.data?.transaction ?? response?.data ?? null;
+      if (newTransaction) setTransactions(prev => [newTransaction, ...prev]);
+      await loadDashboardData();
+      return response;
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateTransaction = async (id, transactionData) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiService.updateTransaction(id, transactionData);
+      const updated = response?.data?.transaction ?? response?.data ?? null;
+      if (updated) {
+        setTransactions(prev => prev.map(t => (t._id === id ? updated : t)));
+      }
+      await loadDashboardData();
+      return response;
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteTransaction = async (id) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await apiService.deleteTransaction(id);
+      setTransactions(prev => prev.filter(t => t._id !== id));
+      await loadDashboardData();
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Loan actions ---
+  const addLoan = async (loanData) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiService.createLoan(loanData);
+      const newLoan = response?.data?.loan ?? response?.data ?? null;
+      if (newLoan) setLoans(prev => [newLoan, ...prev]);
+      return response;
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateLoan = async (id, loanData) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiService.updateLoan(id, loanData);
+      const updatedLoan = response?.data?.loan ?? response?.data ?? null;
+      if (updatedLoan) setLoans(prev => prev.map(l => (l._id === id ? updatedLoan : l)));
+      return response;
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteLoan = async (id) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await apiService.deleteLoan(id);
+      setLoans(prev => prev.filter(l => l._id !== id));
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Other utilities ---
+  const calculateEMI = async (emiData) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiService.calculateEMI(emiData);
+      return response;
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getFinancialSummary = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiService.getFinancialSummary();
+      return response;
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearError = () => setError(null);
+
+  // --- value exposed to consumers ---
+  const value = {
+    user,
+    isLoggedIn,
+    annualIncome,
+    monthlyIncome,
+    transactions,
+    loans,
+    budgetUsed,
+    totalExpenses,
+    remaining,
+    loading,
+    error,
+
+    login,
+    register,
+    logout,
+    updateIncome,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+    addLoan,
+    updateLoan,
+    deleteLoan,
+    calculateEMI,
+    getFinancialSummary,
+    loadDashboardData,
+    clearError
+  };
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
