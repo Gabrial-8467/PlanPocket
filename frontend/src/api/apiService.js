@@ -66,7 +66,7 @@ class ApiService {
     }
 
     async getCurrentUser() {
-        return this.request('/auth/me');
+        return this.request('/auth/profile');
     }
 
     async updateProfile(profileData) {
