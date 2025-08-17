@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { FaPiggyBank, FaWallet, FaChartLine, FaChartBar, FaPlus, FaReceipt } from 'react-icons/fa';
+import Footer from '../components/footer';
 
 function Dashboard() {
     const { 
@@ -11,7 +12,8 @@ function Dashboard() {
         remaining, 
         budgetUsed, 
         transactions, 
-        addTransaction 
+        addTransaction, 
+        updateIncome
     } = useAppContext();
 
     const [showTransactionForm, setShowTransactionForm] = useState(false);
@@ -22,19 +24,21 @@ function Dashboard() {
         category: ''
     });
 
-    const handleIncomeSubmit = (e) => {
+    const handleIncomeSubmit = async (e) => {
         e.preventDefault();
-        const formData = new FormData(e.target);
-        const income = parseFloat(formData.get('income'));
+        const income = Number(annualIncome);
         if (income > 0) {
             setAnnualIncome(income);
+            if (updateIncome) {
+                await updateIncome(income);
+            }
         }
     };
 
-    const handleTransactionSubmit = (e) => {
+    const handleTransactionSubmit = async (e) => {
         e.preventDefault();
         if (transactionForm.description && transactionForm.amount && transactionForm.category) {
-            addTransaction({
+            await addTransaction({
                 ...transactionForm,
                 amount: parseFloat(transactionForm.amount),
                 date: new Date().toISOString()
@@ -76,7 +80,8 @@ function Dashboard() {
                         name="income"
                         placeholder="Enter Annual Income"
                         className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        defaultValue={annualIncome || ''}
+                        value={annualIncome || ''}
+                        onChange={e => setAnnualIncome(Number(e.target.value))}
                     />
                     <button
                         type="submit"
@@ -237,7 +242,7 @@ function Dashboard() {
             )}
 
             {/* Recent Transactions */}
-            <div className="bg-gray-800 rounded-lg p-6">
+            <div className="bg-gray-800 rounded-lg p-6 my-3">
                 <div className="flex items-center mb-6">
                     <FaReceipt className="text-blue-400 text-xl mr-3" />
                     <h3 className="text-2xl font-bold text-white">Recent Transactions</h3>
@@ -274,10 +279,7 @@ function Dashboard() {
                 )}
             </div>
 
-            {/* Footer */}
-            <div className="text-center mt-12">
-                <p className="text-gray-400">© 2025 PlanPocket. All rights reserved.</p>
-            </div>
+            <Footer/>
         </div>
     );
 }

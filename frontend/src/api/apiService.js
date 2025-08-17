@@ -37,10 +37,14 @@ class ApiService {
 
     // ---------- AUTH ----------
     async register(userData) {
-        return this.request('/auth/register', {
+        const response = await this.request('/auth/register', {
             method: 'POST',
             body: JSON.stringify(userData)
         });
+        if (response?.token) {
+            localStorage.setItem('authToken', response.token);
+        }
+        return response;
     }
 
     async login(credentials) {
@@ -80,7 +84,7 @@ class ApiService {
 
     // ---------- USER ----------
     async updateIncome(incomeData) {
-        return this.request('/user/income', {
+        return this.request('/users/income', {
             method: 'PUT',
             body: JSON.stringify(incomeData)
         });

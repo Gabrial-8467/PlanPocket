@@ -84,7 +84,6 @@ function Navbar() {
                             {profileOpen && (
                                 <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-10">
                                     <Link to="/profile" className="block px-4 py-2 text-gray-800 hover:bg-gray-100">My Profile</Link>
-                                    <Link to="/settings" className="block px-4 py-2 text-gray-800 hover:bg-gray-100">Settings</Link>
                                     <button
                                         onClick={handleLogout}
                                         className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
@@ -160,9 +159,6 @@ function Navbar() {
                             <Link to="/profile" className="flex items-center text-white text-lg hover:text-gray-300 transition" onClick={toggleMenu}>
                                 <FaUserCircle className="mr-2" />
                                 My Profile
-                            </Link>
-                            <Link to="/settings" className="flex items-center text-white text-lg hover:text-gray-300 transition" onClick={toggleMenu}>
-                                Settings
                             </Link>
                             <button
                                 onClick={() => {

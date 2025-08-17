@@ -6,6 +6,7 @@ import Loans from './pages/loans';
 import Summary from './pages/summary';
 import Login from './pages/login';
 import Signup from './pages/Signup';
+import Profile from './pages/profile';
 import { AppProvider } from './context/AppContext';
 
 function App(){
@@ -19,6 +20,7 @@ function App(){
                     <Route path="/summary" element={<Summary />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
+                    <Route path="/profile" element={<Profile />} />
                 </Routes>
             </div>
         </AppProvider>

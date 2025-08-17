@@ -35,3 +35,12 @@ exports.deleteTransaction = async (req, res) => {
     res.status(500).send('Server error');
   }
 };
+
+exports.getStatsSummary = async (req, res) => {
+  // Dummy data for now
+  res.json({
+    monthlyExpenses: 1200,
+    budgetUsed: 800,
+    remainingBudget: 400
+  });
+};

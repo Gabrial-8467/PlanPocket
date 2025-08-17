@@ -14,6 +14,9 @@ router.post('/', [auth, [
 // @route GET /api/transactions
 router.get('/', auth, txController.getTransactions);
 
+// @route GET /api/transactions/stats/summary
+router.get('/stats/summary', auth, txController.getStatsSummary);
+
 // @route DELETE /api/transactions/:id
 router.delete('/:id', auth, txController.deleteTransaction);
 

@@ -15,7 +15,7 @@ function Signup() {
     });
     const [errors, setErrors] = useState({});
     const [isLoading, setIsLoading] = useState(false);
-    const { register } = useAppContext();
+    const { register, login } = useAppContext();
     const navigate = useNavigate();
 
     const occupationOptions = [
@@ -79,7 +79,7 @@ function Signup() {
         try {
             // Call the register function from AppContext
             await register({
-                fullName: formData.fullName,
+                name: formData.fullName,
                 email: formData.email,
                 password: formData.password,
                 contactNumber: formData.contactNumber,
@@ -88,6 +88,19 @@ function Signup() {
             });
             navigate('/');
         } catch (error) {
+            // Try to auto-login if user already exists
+            if (error?.message?.toLowerCase().includes('user already exists')) {
+                try {
+                    await login({
+                        email: formData.email,
+                        password: formData.password
+                    });
+                    navigate('/');
+                    return;
+                } catch (loginErr) {
+                    console.error('Auto-login failed:', loginErr);
+                }
+            }
             console.error('Signup error:', error);
         } finally {
             setIsLoading(false);
