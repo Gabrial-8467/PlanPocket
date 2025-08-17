@@ -24,6 +24,17 @@ export const AppProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // --- Dynamic financial calculations ---
+  const [financialMetrics, setFinancialMetrics] = useState({
+    monthlyIncomeFromTransactions: 0,
+    totalExpensesFromTransactions: 0,
+    totalLoanInstallments: 0,
+    totalOutstandingDebt: 0,
+    netCashFlow: 0,
+    debtToIncomeRatio: 0,
+    monthlySavingsRate: 0
+  });
+
   // --- Helpers ---
   const getErrorMessage = (err) => {
     if (!err) return 'Unknown error';
@@ -31,6 +42,67 @@ export const AppProvider = ({ children }) => {
     if (err.message) return err.message;
     return String(err);
   };
+
+  // --- Calculate financial metrics from transactions and loans ---
+  const calculateFinancialMetrics = useCallback(() => {
+    // Calculate monthly income from income transactions (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const monthlyIncomeFromTransactions = transactions
+      .filter(tx => tx.type === 'income' && new Date(tx.date) >= thirtyDaysAgo)
+      .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    
+    // Calculate total expenses from expense transactions (last 30 days)
+    const totalExpensesFromTransactions = transactions
+      .filter(tx => tx.type === 'expense' && new Date(tx.date) >= thirtyDaysAgo)
+      .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    
+    // Calculate total loan installments
+    const totalLoanInstallments = loans.reduce((sum, loan) => sum + (loan.monthlyInstallment || 0), 0);
+    
+    // Calculate total outstanding debt
+    const totalOutstandingDebt = loans.reduce((sum, loan) => sum + (loan.remainingBalance || 0), 0);
+    
+    // Calculate net cash flow
+    const netCashFlow = monthlyIncomeFromTransactions - totalExpensesFromTransactions - totalLoanInstallments;
+    
+    // Calculate debt-to-income ratio
+    const debtToIncomeRatio = monthlyIncomeFromTransactions > 0 
+      ? ((totalLoanInstallments / monthlyIncomeFromTransactions) * 100) 
+      : 0;
+    
+    // Calculate monthly savings rate
+    const monthlySavingsRate = monthlyIncomeFromTransactions > 0 
+      ? ((netCashFlow / monthlyIncomeFromTransactions) * 100) 
+      : 0;
+
+    setFinancialMetrics({
+      monthlyIncomeFromTransactions,
+      totalExpensesFromTransactions,
+      totalLoanInstallments,
+      totalOutstandingDebt,
+      netCashFlow,
+      debtToIncomeRatio,
+      monthlySavingsRate
+    });
+
+    // Update global state
+    setMonthlyIncome(monthlyIncomeFromTransactions);
+    setTotalExpenses(totalExpensesFromTransactions);
+    setRemaining(Math.max(0, monthlyIncomeFromTransactions - totalExpensesFromTransactions));
+    
+    // Calculate budget used percentage
+    const budgetUsed = monthlyIncomeFromTransactions > 0 
+      ? Math.round((totalExpensesFromTransactions / monthlyIncomeFromTransactions) * 100) 
+      : 0;
+    setBudgetUsed(budgetUsed);
+  }, [transactions, loans]);
+
+  // --- Recalculate metrics when data changes ---
+  useEffect(() => {
+    calculateFinancialMetrics();
+  }, [calculateFinancialMetrics]);
 
   // --- Auth check on load ---
   useEffect(() => {
@@ -44,7 +116,7 @@ export const AppProvider = ({ children }) => {
             setUser(fetchedUser);
             setIsLoggedIn(true);
             setAnnualIncome(fetchedUser.annualIncome || 0);
-            setMonthlyIncome(fetchedUser.monthlyIncome || 0);
+            // Note: monthlyIncome will be calculated from transactions
           } else {
             apiService.removeToken?.();
             setUser(null);
@@ -70,18 +142,41 @@ export const AppProvider = ({ children }) => {
       setError(null);
 
       const [transactionsResp, loansResp, statsResp] = await Promise.all([
-        apiService.getTransactions?.({ limit: 10 }),
+        apiService.getTransactions?.(),
         apiService.getLoans?.(),
         apiService.getTransactionStats?.(),
       ]);
 
-      setTransactions(transactionsResp?.data?.transactions ?? []);
-      setLoans(loansResp?.data?.loans ?? []);
+      console.log("loadDashboardData - loansResp:", loansResp);
+
+      setTransactions(
+        Array.isArray(transactionsResp)
+          ? transactionsResp
+          : transactionsResp?.transactions ||
+            transactionsResp?.data?.transactions ||
+            []
+      );
+      setLoans(
+        Array.isArray(loansResp)
+          ? loansResp
+          : loansResp?.loans ||
+            loansResp?.data?.loans ||
+            []
+      );
+
+      console.log("loadDashboardData - loans state set to:", 
+        Array.isArray(loansResp)
+          ? loansResp
+          : loansResp?.loans ||
+            loansResp?.data?.loans ||
+            []
+      );
 
       const stats = statsResp?.data ?? {};
-      setTotalExpenses(stats.monthlyExpenses ?? 0);
-      setBudgetUsed(stats.budgetUsed ?? 0);
-      setRemaining(stats.remainingBudget ?? 0);
+      // Note: These will be calculated dynamically from transactions and loans
+      // setTotalExpenses(stats.monthlyExpenses ?? 0);
+      // setBudgetUsed(stats.budgetUsed ?? 0);
+      // setRemaining(stats.remainingBudget ?? 0);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -112,7 +207,7 @@ export const AppProvider = ({ children }) => {
         setUser(finalUser);
         setIsLoggedIn(true);
         setAnnualIncome(finalUser.annualIncome ?? 0);
-        setMonthlyIncome(finalUser.monthlyIncome ?? 0);
+        // Note: monthlyIncome will be calculated from transactions
       }
 
       await loadDashboardData();
@@ -150,7 +245,7 @@ export const AppProvider = ({ children }) => {
         setUser(finalUser);
         setIsLoggedIn(true);
         setAnnualIncome(finalUser.annualIncome ?? 0);
-        setMonthlyIncome(finalUser.monthlyIncome ?? 0);
+        // Note: monthlyIncome will be calculated from transactions
       }
 
       return resp;
@@ -180,6 +275,15 @@ export const AppProvider = ({ children }) => {
     setTotalExpenses(0);
     setRemaining(0);
     setError(null);
+    setFinancialMetrics({
+      monthlyIncomeFromTransactions: 0,
+      totalExpensesFromTransactions: 0,
+      totalLoanInstallments: 0,
+      totalOutstandingDebt: 0,
+      netCashFlow: 0,
+      debtToIncomeRatio: 0,
+      monthlySavingsRate: 0
+    });
   };
 
   // --- Profile / income ---
@@ -193,10 +297,10 @@ export const AppProvider = ({ children }) => {
       if (updatedUser) {
         setUser(updatedUser);
         setAnnualIncome(updatedUser.annualIncome ?? income);
-        setMonthlyIncome(updatedUser.monthlyIncome ?? Math.round((updatedUser.annualIncome ?? income) / 12));
+        // Note: monthlyIncome will be calculated from transactions
       } else {
         setAnnualIncome(income);
-        setMonthlyIncome(Math.round(income / 12));
+        // Note: monthlyIncome will be calculated from transactions
       }
 
       return response;
@@ -212,39 +316,22 @@ export const AppProvider = ({ children }) => {
   // --- Transactions ---
   const addTransaction = async (data) => {
     try {
+      console.log("Attempting to add transaction:", data);
       const response = await apiService.createTransaction(data);
-  
-      // Log to check actual backend shape
       console.log("Add Transaction Response:", response);
-  
-      // Adjust parsing depending on backend shape
-      const newTx =
-        response?.transaction || 
-        response?.data?.transaction || 
-        response?.data || 
-        response;
-  
-      if (newTx) {
-        setTransactions((prev) => [newTx, ...prev]);
-      }
-  
-      // ⚠️ Optional: only reload dashboard if API already returns updated data
-      // await loadDashboardData();
-  
+      await loadDashboardData();
       return response;
     } catch (err) {
       const msg = getErrorMessage(err);
       setError(msg);
+      alert("Error adding transaction: " + msg);
       throw new Error(msg);
     }
   };
-  
 
   const updateTransaction = async (id, data) => {
     try {
       const response = await apiService.updateTransaction(id, data);
-      const updated = response?.data?.transaction ?? response?.data ?? null;
-      if (updated) setTransactions(prev => prev.map(t => (t._id === id ? updated : t)));
       await loadDashboardData();
       return response;
     } catch (err) {
@@ -257,7 +344,6 @@ export const AppProvider = ({ children }) => {
   const deleteTransaction = async (id) => {
     try {
       await apiService.deleteTransaction(id);
-      setTransactions(prev => prev.filter(t => t._id !== id));
       await loadDashboardData();
     } catch (err) {
       const msg = getErrorMessage(err);
@@ -269,9 +355,13 @@ export const AppProvider = ({ children }) => {
   // --- Loans ---
   const addLoan = async (data) => {
     try {
+      console.log("Attempting to add loan:", data);
       const response = await apiService.createLoan(data);
-      const newLoan = response?.data?.loan ?? response?.data ?? null;
-      if (newLoan) setLoans(prev => [newLoan, ...prev]);
+      console.log("Add Loan Response:", response);
+      
+      // Always reload dashboard data to get the latest loans
+      await loadDashboardData();
+      
       return response;
     } catch (err) {
       const msg = getErrorMessage(err);
@@ -283,8 +373,7 @@ export const AppProvider = ({ children }) => {
   const updateLoan = async (id, data) => {
     try {
       const response = await apiService.updateLoan(id, data);
-      const updatedLoan = response?.data?.loan ?? response?.data ?? null;
-      if (updatedLoan) setLoans(prev => prev.map(l => (l._id === id ? updatedLoan : l)));
+      await loadDashboardData();
       return response;
     } catch (err) {
       const msg = getErrorMessage(err);
@@ -296,7 +385,7 @@ export const AppProvider = ({ children }) => {
   const deleteLoan = async (id) => {
     try {
       await apiService.deleteLoan(id);
-      setLoans(prev => prev.filter(l => l._id !== id));
+      await loadDashboardData();
     } catch (err) {
       const msg = getErrorMessage(err);
       setError(msg);
@@ -337,6 +426,7 @@ export const AppProvider = ({ children }) => {
     remaining,
     loading,
     error,
+    financialMetrics,
 
     login,
     register,

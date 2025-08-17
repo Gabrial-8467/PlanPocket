@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { FaPlus, FaCar, FaCalculator, FaArrowLeft } from 'react-icons/fa';
+import { FaPlus, FaCar, FaCalculator, FaArrowLeft, FaChartLine, FaExclamationTriangle, FaCheckCircle } from 'react-icons/fa';
 
 function Loans() {
-    const { loans, addLoan } = useAppContext();
+    const { loans, addLoan, financialMetrics } = useAppContext();
     const [showAddLoan, setShowAddLoan] = useState(false);
     const [selectedLoan, setSelectedLoan] = useState(null);
     const [loanForm, setLoanForm] = useState({
         name: '',
-        principalAmount: '',
+        principal: '',
         remainingBalance: '',
-        tenure: '',
+        termMonths: '',
         interestRate: ''
     });
 
-    const calculateMonthlyInstallment = (principal, tenure, interestRate) => {
+    const calculateMonthlyInstallment = (principal, termMonths, interestRate) => {
         const monthlyRate = interestRate / 100 / 12;
-        const numberOfPayments = tenure * 12;
+        const numberOfPayments = termMonths;
         
         if (monthlyRate === 0) return principal / numberOfPayments;
         
@@ -28,28 +29,24 @@ function Loans() {
 
     const handleLoanSubmit = (e) => {
         e.preventDefault();
-        const principal = parseFloat(loanForm.principalAmount);
-        const tenure = parseFloat(loanForm.tenure);
+        const principal = parseFloat(loanForm.principal);
+        const termMonths = parseFloat(loanForm.termMonths);
         const interestRate = parseFloat(loanForm.interestRate);
         
-        const monthlyInstallment = calculateMonthlyInstallment(principal, tenure, interestRate);
-        
-        addLoan({
-            ...loanForm,
-            principalAmount: principal,
-            remainingBalance: principal,
-            tenure: tenure,
+        // Only send the 3 required fields that the backend expects
+        const loanData = {
+            principal: principal,
             interestRate: interestRate,
-            monthlyInstallment: monthlyInstallment,
-            startDate: new Date().toISOString(),
-            status: 'Active'
-        });
+            termMonths: termMonths
+        };
+        
+        addLoan(loanData);
         
         setLoanForm({
             name: '',
-            principalAmount: '',
+            principal: '',
             remainingBalance: '',
-            tenure: '',
+            termMonths: '',
             interestRate: ''
         });
         setShowAddLoan(false);
@@ -86,7 +83,7 @@ function Loans() {
                         <div className="space-y-6">
                             <div className="bg-gray-800 rounded-lg p-6">
                                 <h3 className="text-white font-semibold mb-2">Principal Amount</h3>
-                                <p className="text-2xl font-bold text-white">{formatCurrency(selectedLoan.principalAmount)}</p>
+                                <p className="text-2xl font-bold text-white">{formatCurrency(selectedLoan.principal || selectedLoan.principalAmount)}</p>
                             </div>
                             
                             <div className="bg-gray-800 rounded-lg p-6">
@@ -95,20 +92,20 @@ function Loans() {
                             </div>
                             
                             <div className="bg-gray-800 rounded-lg p-6">
-                                <h3 className="text-white font-semibold mb-2">Tenure</h3>
-                                <p className="text-2xl font-bold text-white">{selectedLoan.tenure} months</p>
+                                <h3 className="text-white font-semibold mb-2">Term</h3>
+                                <p className="text-2xl font-bold text-white">{selectedLoan.termMonths || selectedLoan.tenure} months</p>
                             </div>
                             
                             <div className="bg-gray-800 rounded-lg p-6">
                                 <h3 className="text-white font-semibold mb-2">Pending Installments</h3>
-                                <p className="text-2xl font-bold text-white">{selectedLoan.tenure}</p>
+                                <p className="text-2xl font-bold text-white">{selectedLoan.termMonths || selectedLoan.tenure}</p>
                             </div>
                         </div>
                         
                         <div className="space-y-6">
                             <div className="bg-gray-800 rounded-lg p-6">
                                 <h3 className="text-white font-semibold mb-2">Sum Assured</h3>
-                                <p className="text-2xl font-bold text-white">{formatCurrency(selectedLoan.principalAmount)}</p>
+                                <p className="text-2xl font-bold text-white">{formatCurrency(selectedLoan.principal || selectedLoan.principalAmount)}</p>
                             </div>
                             
                             <div className="bg-gray-800 rounded-lg p-6">
@@ -134,18 +131,57 @@ function Loans() {
 
     return (
         <div className="container mx-auto px-6 py-8">
+            {/* Navigation Breadcrumb */}
+            <div className="mb-6">
+                <Link to="/" className="flex items-center text-blue-400 hover:text-blue-300 transition">
+                    <FaArrowLeft className="mr-2" />
+                    Back to Dashboard
+                </Link>
+            </div>
+
             <div className="text-center mb-8">
                 <h1 className="text-4xl font-bold text-white mb-2">PlanPocket Loan Information</h1>
                 <p className="text-gray-300 text-lg">View and manage all your active loans.</p>
             </div>
 
+            {/* Loan Overview Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg p-6 text-center">
+                    <FaCar className="text-white text-3xl mx-auto mb-3" />
+                    <h3 className="text-white font-semibold mb-2">Total Loans</h3>
+                    <p className="text-3xl font-bold text-white">{loans.length}</p>
+                    <p className="text-blue-200 text-sm">Active loans</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-lg p-6 text-center">
+                    <FaCalculator className="text-white text-3xl mx-auto mb-3" />
+                    <h3 className="text-white font-semibold mb-2">Total Debt</h3>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(financialMetrics.totalOutstandingDebt)}</p>
+                    <p className="text-red-200 text-sm">Outstanding balance</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-lg p-6 text-center">
+                    <FaChartLine className="text-white text-3xl mx-auto mb-3" />
+                    <h3 className="text-white font-semibold mb-2">Monthly Payments</h3>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(financialMetrics.totalLoanInstallments)}</p>
+                    <p className="text-yellow-200 text-sm">Total EMI</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-lg p-6 text-center">
+                    <FaCheckCircle className="text-white text-3xl mx-auto mb-3" />
+                    <h3 className="text-white font-semibold mb-2">Debt Ratio</h3>
+                    <p className="text-2xl font-bold text-white">{financialMetrics.debtToIncomeRatio.toFixed(1)}%</p>
+                    <p className="text-green-200 text-sm">Of monthly income</p>
+                </div>
+            </div>
+
             {/* Add New Loan Button */}
-            <div className="mb-8">
+            <div className="mb-8 text-center">
                 <button
                     onClick={() => setShowAddLoan(true)}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition flex items-center"
+                    className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition flex items-center mx-auto text-lg"
                 >
-                    <FaPlus className="mr-2" />
+                    <FaPlus className="mr-3 text-xl" />
                     Add New Loan
                 </button>
             </div>
@@ -154,7 +190,7 @@ function Loans() {
             <div className="space-y-6">
                 {loans.map((loan) => (
                     <div 
-                        key={loan.id} 
+                        key={loan.id || loan._id} 
                         className="bg-gray-800 rounded-lg p-6 cursor-pointer hover:bg-gray-700 transition"
                         onClick={() => setSelectedLoan(loan)}
                     >
@@ -162,19 +198,47 @@ function Loans() {
                             <div className="flex items-center">
                                 <FaCar className="text-blue-400 text-2xl mr-4" />
                                 <div>
-                                    <h3 className="text-xl font-bold text-white">{loan.name}</h3>
+                                    <h3 className="text-xl font-bold text-white">{loan.name || 'Unnamed Loan'}</h3>
                                     <div className="flex items-center mt-2">
                                         <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm">
-                                            {loan.status}
+                                            {loan.status || 'Active'}
                                         </span>
                                     </div>
                                 </div>
                             </div>
                             <div className="text-right">
                                 <p className="text-gray-300 text-sm">Principal Amount</p>
-                                <p className="text-xl font-bold text-white">{formatCurrency(loan.principalAmount)}</p>
+                                <p className="text-xl font-bold text-white">{formatCurrency(loan.principal || loan.principalAmount)}</p>
                                 <p className="text-gray-300 text-sm mt-2">Remaining Balance</p>
-                                <p className="text-xl font-bold text-white">{formatCurrency(loan.remainingBalance)}</p>
+                                <p className="text-xl font-bold text-white">{formatCurrency(loan.remainingBalance || 0)}</p>
+                            </div>
+                        </div>
+                        
+                        {/* Additional Loan Info */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-700">
+                            <div className="text-center">
+                                <p className="text-gray-400 text-sm">Monthly EMI</p>
+                                <p className="text-lg font-semibold text-yellow-400">
+                                    {formatCurrency(loan.monthlyInstallment || 0)}
+                                </p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-gray-400 text-sm">Interest Rate</p>
+                                <p className="text-lg font-semibold text-white">
+                                    {loan.interestRate}%
+                                </p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-gray-400 text-sm">Term</p>
+                                <p className="text-lg font-semibold text-white">
+                                    {loan.termMonths || loan.tenure || 0} months
+                                </p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-gray-400 text-sm">Type</p>
+                                <p className="text-lg font-semibold text-blue-400">
+                                    {loan.loanType || 'Personal'}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -183,7 +247,14 @@ function Loans() {
                 {loans.length === 0 && (
                     <div className="text-center py-12">
                         <FaCar className="text-gray-500 text-6xl mx-auto mb-4" />
-                        <p className="text-gray-400 text-lg">No loans added yet. Add your first loan to get started!</p>
+                        <p className="text-gray-400 text-lg mb-4">No loans added yet. Add your first loan to get started!</p>
+                        <button
+                            onClick={() => setShowAddLoan(true)}
+                            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+                        >
+                            <FaPlus className="mr-2" />
+                            Add Your First Loan
+                        </button>
                     </div>
                 )}
             </div>
@@ -209,8 +280,8 @@ function Loans() {
                             <input
                                 type="number"
                                 placeholder="Principal Amount"
-                                value={loanForm.principalAmount}
-                                onChange={(e) => setLoanForm({...loanForm, principalAmount: e.target.value})}
+                                value={loanForm.principal}
+                                onChange={(e) => setLoanForm({...loanForm, principal: e.target.value})}
                                 className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
                             />
                             
@@ -224,10 +295,10 @@ function Loans() {
                             
                             <input
                                 type="number"
-                                placeholder="Tenure (in years)"
-                                value={loanForm.tenure}
-                                onChange={(e) => setLoanForm({...loanForm, tenure: e.target.value})}
-                                className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+                                placeholder="Term (in months)"
+                                value={loanForm.termMonths}
+                                onChange={(e) => setLoanForm({...loanForm, termMonths: e.target.value})}
+                                className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 mb-4"
                             />
                             
                             <input
@@ -240,13 +311,13 @@ function Loans() {
                             />
 
                             {/* Calculated Monthly Installment */}
-                            {loanForm.principalAmount && loanForm.tenure && loanForm.interestRate && (
+                            {loanForm.principal && loanForm.termMonths && loanForm.interestRate && (
                                 <div className="bg-gray-700 rounded-lg p-4 mb-6">
                                     <h4 className="text-white font-semibold mb-2">Estimated Monthly Installment:</h4>
                                     <p className="text-2xl font-bold text-green-500">
                                         {formatCurrency(calculateMonthlyInstallment(
-                                            parseFloat(loanForm.principalAmount),
-                                            parseFloat(loanForm.tenure),
+                                            parseFloat(loanForm.principal),
+                                            parseFloat(loanForm.termMonths),
                                             parseFloat(loanForm.interestRate)
                                         ))}
                                     </p>
@@ -272,6 +343,27 @@ function Loans() {
                     </div>
                 </div>
             )}
+
+            {/* Quick Actions */}
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Link to="/" className="bg-blue-600 text-white p-4 rounded-lg hover:bg-blue-700 transition text-center">
+                    <FaChartLine className="text-2xl mx-auto mb-2" />
+                    <div className="font-semibold">Dashboard</div>
+                    <div className="text-sm text-blue-200">View financial overview</div>
+                </Link>
+                
+                <Link to="/summary" className="bg-green-600 text-white p-4 rounded-lg hover:bg-green-700 transition text-center">
+                    <FaCalculator className="text-2xl mx-auto mb-2" />
+                    <div className="font-semibold">Financial Summary</div>
+                    <div className="text-sm text-green-200">Detailed analysis</div>
+                </Link>
+                
+                <Link to="/profile" className="bg-purple-600 text-white p-4 rounded-lg hover:bg-purple-700 transition text-center">
+                    <FaCheckCircle className="text-2xl mx-auto mb-2" />
+                    <div className="font-semibold">My Profile</div>
+                    <div className="text-sm text-purple-200">Personal settings</div>
+                </Link>
+            </div>
         </div>
     );
 }
