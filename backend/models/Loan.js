@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const LoanSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   principal: { type: Number, required: true },
+  name: { type: String, required: true },
+  remainingBalance: { type: Number, required: true },
   interestRate: { type: Number, required: true }, // annual percent
   termMonths: { type: Number, required: true },
   startDate: { type: Date, default: Date.now },

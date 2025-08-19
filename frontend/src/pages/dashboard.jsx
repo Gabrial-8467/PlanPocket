@@ -407,12 +407,6 @@ function Dashboard() {
                     </div>
                 )}
             </div>
-
-            {/* If modal never opens, show debug message */}
-            {!showTransactionForm && (
-                <div className="text-center text-yellow-400 text-sm mb-2">Debug: Modal is closed. Click 'Add New Transaction' to open.</div>
-            )}
-
             <Footer/>
         </div>
     );

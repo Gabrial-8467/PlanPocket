@@ -114,8 +114,8 @@ function Summary() {
                         
                         {loans.map((loan, index) => (
                             <div key={loan.id || loan._id} className="bg-gray-700 rounded-lg p-4">
-                                <h3 className="text-gray-300 text-sm">{loan.name}</h3>
-                                <p className="text-2xl font-bold text-red-500">{formatCurrency(loan.remainingBalance || 0)}</p>
+                                <h3 className="text-gray-300 text-sm">{loan.name || loan.notes || `Loan ${index + 1}`}</h3>
+                                <p className="text-2xl font-bold text-red-500">{formatCurrency((loan.remainingBalance ?? loan.principal ?? 0))}</p>
                             </div>
                         ))}
                         

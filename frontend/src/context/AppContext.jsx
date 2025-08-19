@@ -106,29 +106,30 @@ export const AppProvider = ({ children }) => {
   // --- Auth check on load ---
   useEffect(() => {
     const checkAuth = async () => {
-      if (apiService.isAuthenticated?.()) {
-        try {
-          setLoading(true);
-          const resp = await apiService.getCurrentUser();
-          const fetchedUser = resp?.user ?? resp?.data?.user ?? null;
-          if (fetchedUser) {
-            setUser(fetchedUser);
-            setIsLoggedIn(true);
-            setAnnualIncome(fetchedUser.annualIncome || 0);
-            // Note: monthlyIncome will be calculated from transactions
-          } else {
-            apiService.removeToken?.();
-            setUser(null);
-            setIsLoggedIn(false);
-          }
-        } catch (err) {
-          console.error('Auth check failed:', err);
+      if (!apiService.isAuthenticated?.()) return;
+      try {
+        setLoading(true);
+        const resp = await apiService.getCurrentUser();
+        const fetchedUser = resp?.user ?? resp?.data?.user ?? null;
+        if (fetchedUser) {
+          setUser(fetchedUser);
+          setIsLoggedIn(true);
+          setAnnualIncome(fetchedUser.annualIncome || 0);
+        } else {
+          // Only clear token if explicit 401 occurs elsewhere
+          setUser(null);
+          setIsLoggedIn(false);
+        }
+      } catch (err) {
+        console.error('Auth check failed:', err);
+        // Do not remove token for non-auth errors
+        if (err?.status === 401) {
           apiService.removeToken?.();
           setUser(null);
           setIsLoggedIn(false);
-        } finally {
-          setLoading(false);
         }
+      } finally {
+        setLoading(false);
       }
     };
     checkAuth();
@@ -141,8 +142,8 @@ export const AppProvider = ({ children }) => {
       setError(null);
 
       const [transactionsResp, loansResp, statsResp] = await Promise.all([
-        apiService.getTransactions?.(),
-        apiService.getLoans?.(),
+        apiService.getTransactions?.().catch(err => { throw err; }),
+        apiService.getLoans?.().catch(err => { throw err; }),
         apiService.getTransactionStats?.(),
       ]);
 
@@ -155,21 +156,40 @@ export const AppProvider = ({ children }) => {
             transactionsResp?.data?.transactions ||
             []
       );
-      setLoans(
-        Array.isArray(loansResp)
-          ? loansResp
-          : loansResp?.loans ||
-            loansResp?.data?.loans ||
-            []
-      );
+      const rawLoans = Array.isArray(loansResp)
+        ? loansResp
+        : loansResp?.loans || loansResp?.data?.loans || [];
 
-      console.log("loadDashboardData - loans state set to:", 
-        Array.isArray(loansResp)
-          ? loansResp
-          : loansResp?.loans ||
-            loansResp?.data?.loans ||
-            []
-      );
+      const normalizeLoan = (loan) => {
+        const principal = Number(loan.principal ?? loan.principalAmount ?? 0);
+        const interestRate = Number(loan.interestRate ?? 0);
+        const termMonths = Number(loan.termMonths ?? loan.tenure ?? 0);
+        const monthlyRate = interestRate / 100 / 12;
+        let monthlyInstallment = 0;
+        if (principal > 0 && termMonths > 0) {
+          if (monthlyRate === 0) {
+            monthlyInstallment = principal / termMonths;
+          } else {
+            const pow = Math.pow(1 + monthlyRate, termMonths);
+            monthlyInstallment = principal * (monthlyRate * pow) / (pow - 1);
+          }
+        }
+        return {
+          ...loan,
+          name: loan.name || loan.notes || undefined,
+          principal,
+          termMonths,
+          interestRate,
+          monthlyInstallment,
+          remainingBalance: Number(loan.remainingBalance ?? principal),
+          status: loan.status || 'Active',
+        };
+      };
+
+      const normalizedLoans = rawLoans.map(normalizeLoan);
+      setLoans(normalizedLoans);
+
+      console.log("loadDashboardData - loans state set to:", normalizedLoans);
 
       const stats = statsResp?.data ?? {};
       // Note: These will be calculated dynamically from transactions and loans
@@ -177,7 +197,14 @@ export const AppProvider = ({ children }) => {
       // setBudgetUsed(stats.budgetUsed ?? 0);
       // setRemaining(stats.remainingBudget ?? 0);
     } catch (err) {
-      setError(getErrorMessage(err));
+      if (err?.status === 401) {
+        // Token invalid/expired: clear auth but don't loop
+        apiService.removeToken?.();
+        setUser(null);
+        setIsLoggedIn(false);
+      } else {
+        setError(getErrorMessage(err));
+      }
     } finally {
       setLoading(false);
     }

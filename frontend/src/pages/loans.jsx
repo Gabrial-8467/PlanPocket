@@ -33,11 +33,12 @@ function Loans() {
         const termMonths = parseFloat(loanForm.termMonths);
         const interestRate = parseFloat(loanForm.interestRate);
         
-        // Only send the 3 required fields that the backend expects
+        // Backend expects principal, interestRate, termMonths. Persist name in notes.
         const loanData = {
             principal: principal,
             interestRate: interestRate,
-            termMonths: termMonths
+            termMonths: termMonths,
+            ...(loanForm.name?.trim() ? { name: loanForm.name.trim(), notes: loanForm.name.trim() } : {})
         };
         
         addLoan(loanData);
@@ -77,7 +78,7 @@ function Loans() {
                         Back to Loans
                     </button>
                     
-                    <h1 className="text-3xl font-bold text-white mb-8">Loan Details</h1>
+                    <h1 className="text-3xl font-bold text-white mb-8">{selectedLoan.name || selectedLoan.notes || 'Loan'} Details</h1>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-6">
@@ -198,7 +199,7 @@ function Loans() {
                             <div className="flex items-center">
                                 <FaCar className="text-blue-400 text-2xl mr-4" />
                                 <div>
-                                    <h3 className="text-xl font-bold text-white">{loan.name || 'Unnamed Loan'}</h3>
+                                    <h3 className="text-xl font-bold text-white">{loan.name}</h3>
                                     <div className="flex items-center mt-2">
                                         <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm">
                                             {loan.status || 'Active'}

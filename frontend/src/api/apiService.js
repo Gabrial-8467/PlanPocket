@@ -22,10 +22,19 @@ class ApiService {
 
         try {
             const response = await fetch(url, config);
-            const data = await response.json();
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (e) {
+                // Non-JSON response
+                data = null;
+            }
 
             if (!response.ok) {
-                throw new Error(data.message || 'Request failed');
+                const error = new Error((data && (data.message || data.msg)) || 'Request failed');
+                error.status = response.status;
+                error.data = data;
+                throw error;
             }
 
             return data;
