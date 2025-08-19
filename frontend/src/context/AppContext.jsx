@@ -24,7 +24,6 @@ export const AppProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // --- Dynamic financial calculations ---
   const [financialMetrics, setFinancialMetrics] = useState({
     monthlyIncomeFromTransactions: 0,
     totalExpensesFromTransactions: 0,
