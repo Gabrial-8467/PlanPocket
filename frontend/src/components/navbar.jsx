@@ -31,7 +31,7 @@ function Navbar() {
 
     return (
         <>
-            <nav className="bg-gray-800 px-6 py-4 flex items-center justify-between">
+            <nav className="bg-gray-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
                 {/* Logo */}
                 <Link to="/" className="text-white text-3xl font-bold cursor-pointer">
                     PlanPocket

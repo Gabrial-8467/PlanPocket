@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { FaPiggyBank, FaWallet, FaChartLine, FaChartBar, FaPlus, FaReceipt, FaChartPie, FaArrowRight, FaCreditCard, FaUserCircle } from 'react-icons/fa';
-import Footer from '../components/footer';
+
 
 function Dashboard() {
     const { 
@@ -407,7 +407,6 @@ function Dashboard() {
                     </div>
                 )}
             </div>
-            <Footer/>
         </div>
     );
 }

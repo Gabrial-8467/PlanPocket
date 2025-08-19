@@ -8,6 +8,7 @@ import Login from './pages/login';
 import Signup from './pages/Signup';
 import Profile from './pages/profile';
 import { AppProvider } from './context/AppContext';
+import Footer from './components/footer';
 
 function App(){
     return(
@@ -22,6 +23,7 @@ function App(){
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/profile" element={<Profile />} />
                 </Routes>
+                <Footer/>
             </div>
         </AppProvider>
     )
