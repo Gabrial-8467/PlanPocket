@@ -6,7 +6,12 @@ exports.createTransaction = async (req, res) => {
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
   try {
-    const tx = new Transaction({ ...req.body, user: req.user.id });
+    const { amount, ...rest } = req.body;
+    const amt = Number(amount);
+    if (isNaN(amt) || amt <= 0) {
+      return res.status(400).json({ message: 'Amount must be a positive number.' });
+    }
+    const tx = new Transaction({ ...rest, amount: amt, user: req.user.id });
     await tx.save();
     res.json(tx);
   } catch (err) {
@@ -42,6 +47,13 @@ exports.updateTransaction = async (req, res) => {
     const update = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) update[key] = req.body[key];
+    }
+    if (update.amount !== undefined) {
+      const amt = Number(update.amount);
+      if (isNaN(amt) || amt <= 0) {
+        return res.status(400).json({ message: 'Amount must be a positive number.' });
+      }
+      update.amount = amt;
     }
     const tx = await Transaction.findOneAndUpdate(
       { _id: req.params.id, user: req.user.id },

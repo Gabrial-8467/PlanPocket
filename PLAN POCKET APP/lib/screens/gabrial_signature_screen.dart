@@ -253,7 +253,7 @@ class _GabrialSignatureScreenState extends State<GabrialSignatureScreen>
                               child: const Text(
                                 '— Gabrial Deora',
                                 style: TextStyle(
-                                  fontFamily: 'serif',
+                                  fontFamily: 'Nata Sans',
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.0,

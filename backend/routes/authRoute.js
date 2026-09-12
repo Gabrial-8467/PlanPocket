@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { check } = require('express-validator');
-const { register, login, getProfile, changePassword } = require('../controllers/authController');
+const { register, login, getProfile, updateProfile, changePassword } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
 // Public routes (validated)
@@ -18,6 +18,11 @@ router.post('/login', [
 
 // Protected routes
 router.get('/me', protect, getProfile);
+
+router.put('/profile', [
+  check('name', 'Name is required').optional().notEmpty(),
+  check('email', 'Please include a valid email').optional().isEmail()
+], protect, updateProfile);
 
 router.put('/change-password', [
   check('currentPassword', 'Current password is required').exists(),

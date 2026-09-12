@@ -37,8 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final email = _emailController.text.trim().toLowerCase();
-      final password = _passwordController.text.trim();
+final email = _emailController.text.trim().toLowerCase();
+     final password = _passwordController.text;
       await Provider.of<AppProvider>(context, listen: false).login(
         email,
         password,

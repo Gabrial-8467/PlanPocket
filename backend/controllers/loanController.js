@@ -11,16 +11,26 @@ exports.createLoan = async (req, res) => {
   try {
     const { principal, name, notes, interestRate, termMonths, remainingBalance } = req.body;
 
-    if (typeof principal !== 'number' || isNaN(principal) || principal <= 0) {
+    const p = Number(principal);
+    const rate = Number(interestRate);
+    const months = Number(termMonths);
+
+    if (isNaN(p) || p <= 0) {
       return res.status(400).json({ message: 'Loan principal must be a positive number.' });
+    }
+    if (isNaN(rate) || rate < 0) {
+      return res.status(400).json({ message: 'Interest rate must be a non-negative number.' });
+    }
+    if (isNaN(months) || months < 1) {
+      return res.status(400).json({ message: 'Term must be at least 1 month.' });
     }
 
     const loan = new Loan({
-      principal,
+      principal: p,
       name: (name || notes || 'Loan').toString(),
-      remainingBalance: remainingBalance ?? principal,
-      interestRate,
-      termMonths,
+      remainingBalance: remainingBalance !== undefined ? Number(remainingBalance) : p,
+      interestRate: rate,
+      termMonths: months,
       notes: notes || name || '',
       user: req.user.id
     });
@@ -62,12 +72,28 @@ exports.updateLoan = async (req, res) => {
   try {
     const { principal, name, notes, interestRate, termMonths, remainingBalance } = req.body;
     const update = {};
-    if (principal !== undefined) update.principal = principal;
+    if (principal !== undefined) {
+      const p = Number(principal);
+      if (isNaN(p) || p <= 0) return res.status(400).json({ message: 'Loan principal must be a positive number.' });
+      update.principal = p;
+    }
     if (name !== undefined) update.name = name;
     if (notes !== undefined) update.notes = notes;
-    if (interestRate !== undefined) update.interestRate = interestRate;
-    if (termMonths !== undefined) update.termMonths = termMonths;
-    if (remainingBalance !== undefined) update.remainingBalance = remainingBalance;
+    if (interestRate !== undefined) {
+      const rate = Number(interestRate);
+      if (isNaN(rate) || rate < 0) return res.status(400).json({ message: 'Interest rate must be a non-negative number.' });
+      update.interestRate = rate;
+    }
+    if (termMonths !== undefined) {
+      const months = Number(termMonths);
+      if (isNaN(months) || months < 1) return res.status(400).json({ message: 'Term must be at least 1 month.' });
+      update.termMonths = months;
+    }
+    if (remainingBalance !== undefined) {
+      const bal = Number(remainingBalance);
+      if (isNaN(bal) || bal < 0) return res.status(400).json({ message: 'Remaining balance must be a non-negative number.' });
+      update.remainingBalance = bal;
+    }
 
     const loan = await Loan.findOneAndUpdate(
       { _id: req.params.id, user: req.user.id },

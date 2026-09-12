@@ -60,6 +60,36 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+exports.updateProfile = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const { name, email, contactNumber, address, occupationType, annualIncome, monthlyIncome } = req.body;
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+
+    if (email !== undefined && email !== user.email) {
+      const exists = await User.findOne({ email });
+      if (exists) return res.status(400).json({ msg: 'Email is already in use' });
+      user.email = email;
+    }
+    if (name !== undefined) user.name = name;
+    if (contactNumber !== undefined) user.contactNumber = contactNumber;
+    if (address !== undefined) user.address = address;
+    if (occupationType !== undefined) user.occupationType = occupationType;
+    if (annualIncome !== undefined) user.annualIncome = Number(annualIncome);
+    if (monthlyIncome !== undefined) user.monthlyIncome = Number(monthlyIncome);
+
+    await user.save();
+    const updated = await User.findById(user.id).select('-password');
+    res.json({ user: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+};
+
 exports.changePassword = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
