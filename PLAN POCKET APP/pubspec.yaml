@@ -61,6 +61,17 @@ flutter:
   assets:
     - .env
     - assets/icon/
+  fonts:
+    - family: Nata Sans
+      fonts:
+        - asset: assets/fonts/NataSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/NataSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/NataSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/NataSans-Bold.ttf
+          weight: 700
 
 flutter_launcher_icons:
   android: "launcher_icon"

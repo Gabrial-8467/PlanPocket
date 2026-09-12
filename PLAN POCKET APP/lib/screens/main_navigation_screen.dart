@@ -4,6 +4,7 @@ import '../widgets/add_transaction_dialog.dart';
 import 'dashboard_screen.dart';
 import 'summary_screen.dart';
 import 'profile_screen.dart';
+import 'gabrial_signature_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -14,6 +15,7 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  final List<DateTime> _logoTaps = [];
 
   void _onTabTapped(int index) {
     setState(() => _currentIndex = index);
@@ -31,13 +33,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                'assets/icon/app_icon.png',
-                width: 32,
-                height: 32,
-                fit: BoxFit.cover,
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => GabrialSignatureScreen.checkAndTrigger(
+                context: context,
+                tapTimestamps: _logoTaps,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'assets/icon/app_icon.png',
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
             const SizedBox(width: 10),

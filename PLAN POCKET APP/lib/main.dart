@@ -5,6 +5,7 @@ import 'providers/app_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/main_navigation_screen.dart';
+import 'screens/gabrial_signature_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -45,8 +46,15 @@ class PlanPocketApp extends StatelessWidget {
 }
 
 /// Native Flutter transition & auth gate screen
-class NativeAuthScreen extends StatelessWidget {
+class NativeAuthScreen extends StatefulWidget {
   const NativeAuthScreen({super.key});
+
+  @override
+  State<NativeAuthScreen> createState() => _NativeAuthScreenState();
+}
+
+class _NativeAuthScreenState extends State<NativeAuthScreen> {
+  final List<DateTime> _logoTaps = [];
 
   @override
   Widget build(BuildContext context) {
@@ -65,25 +73,32 @@ class NativeAuthScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.22),
-                          blurRadius: 28,
-                          spreadRadius: 2,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => GabrialSignatureScreen.checkAndTrigger(
+                      context: context,
+                      tapTimestamps: _logoTaps,
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: Image.asset(
-                        'assets/icon/splash_icon.png',
-                        width: 104,
-                        height: 104,
-                        fit: BoxFit.contain,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.22),
+                            blurRadius: 28,
+                            spreadRadius: 2,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Image.asset(
+                          'assets/icon/splash_icon.png',
+                          width: 104,
+                          height: 104,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),

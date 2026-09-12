@@ -53,6 +53,7 @@ app.get('/', (req, res) => {
         register: 'POST /api/auth/register',
         login: 'POST /api/auth/login',
         me: 'GET /api/auth/me',
+        changePassword: 'PUT /api/auth/change-password',
       },
       users: {
         me: 'GET /api/users/me',

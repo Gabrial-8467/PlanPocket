@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import 'signup_screen.dart';
+import '../gabrial_signature_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final List<DateTime> _logoTaps = [];
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
@@ -78,25 +80,32 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   // Logo & Brand
                   Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.18),
-                            blurRadius: 20,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => GabrialSignatureScreen.checkAndTrigger(
+                        context: context,
+                        tapTimestamps: _logoTaps,
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Image.asset(
-                          'assets/icon/splash_icon.png',
-                          width: 80,
-                          height: 80,
-                          fit: BoxFit.contain,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.18),
+                              blurRadius: 20,
+                              spreadRadius: 1,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.asset(
+                            'assets/icon/splash_icon.png',
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
                     ),

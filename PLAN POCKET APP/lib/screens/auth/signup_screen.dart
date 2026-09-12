@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
+import '../gabrial_signature_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -18,6 +19,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _addressController = TextEditingController();
+  final List<DateTime> _logoTaps = [];
 
   String _occupationType = 'salaried';
   bool _obscurePassword = true;
@@ -126,25 +128,32 @@ class _SignupScreenState extends State<SignupScreen> {
                 children: [
                   // Header
                   Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.16),
-                            blurRadius: 18,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => GabrialSignatureScreen.checkAndTrigger(
+                        context: context,
+                        tapTimestamps: _logoTaps,
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(18),
-                        child: Image.asset(
-                          'assets/icon/splash_icon.png',
-                          width: 72,
-                          height: 72,
-                          fit: BoxFit.contain,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.16),
+                              blurRadius: 18,
+                              spreadRadius: 1,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: Image.asset(
+                            'assets/icon/splash_icon.png',
+                            width: 72,
+                            height: 72,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
                     ),

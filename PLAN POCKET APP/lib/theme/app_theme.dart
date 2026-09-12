@@ -25,6 +25,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      fontFamily: 'Nata Sans',
       scaffoldBackgroundColor: background,
       primaryColor: primaryBlue,
       colorScheme: const ColorScheme.dark(
