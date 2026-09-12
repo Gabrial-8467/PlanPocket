@@ -1,4 +1,6 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
@@ -18,7 +20,7 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 
 // Middleware
-app.use(helmet());
+app.use(helmet({ crossOriginEmbedderPolicy: false }));
 app.use(compression());
 
 // Restrict CORS to FRONTEND_URL from .env
@@ -39,6 +41,18 @@ app.use('/api/loans', loanRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+// Serve built frontend in production (single service)
+const clientDist = path.join(__dirname, '..', 'frontend', 'dist');
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/health')) {
+      return res.sendFile(path.join(clientDist, 'index.html'));
+    }
+    next();
+  });
+}
 
 // Centralized error handler
 app.use((err, req, res, next) => {
