@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'storage_service.dart';
 import '../models/user.dart';
@@ -20,16 +19,14 @@ class ApiException implements Exception {
 class ApiService {
   final StorageService _storageService = StorageService();
 
+  static const String fallbackDefaultUrl = 'https://planpocket.onrender.com/api';
+
   static String get defaultBaseUrl {
-    if (kIsWeb) {
-      return 'http://127.0.0.1:5000/api';
+    final envUrl = dotenv.env['API_URL']?.trim();
+    if (envUrl != null && envUrl.isNotEmpty) {
+      return envUrl;
     }
-    try {
-      if (Platform.isAndroid) {
-        return 'http://10.0.2.2:5000/api';
-      }
-    } catch (_) {}
-    return 'http://127.0.0.1:5000/api';
+    return fallbackDefaultUrl;
   }
 
   String? _customBaseUrl;
@@ -40,8 +37,14 @@ class ApiService {
     }
     final saved = await _storageService.getCustomBaseUrl();
     if (saved != null && saved.isNotEmpty) {
-      _customBaseUrl = saved;
-      return saved;
+      if (!saved.contains('10.0.2.2') &&
+          !saved.contains('127.0.0.1') &&
+          !saved.contains('localhost')) {
+        _customBaseUrl = saved;
+        return saved;
+      }
+      // If obsolete local IP was saved, reset to production default
+      await _storageService.saveBaseUrl(defaultBaseUrl);
     }
     return defaultBaseUrl;
   }
@@ -72,37 +75,40 @@ class ApiService {
     bool requireAuth = true,
   }) async {
     final baseUrl = await getBaseUrl();
-    final url = Uri.parse('$baseUrl$endpoint');
+    final cleanBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
+    final url = Uri.parse('$cleanBase$endpoint');
     final headers = await _getHeaders(requireAuth: requireAuth);
 
     http.Response response;
     try {
+      // 35-second timeout accounts for Render free-tier cold starts
+      const timeout = Duration(seconds: 35);
       switch (method.toUpperCase()) {
         case 'POST':
           response = await http
               .post(url, headers: headers, body: jsonEncode(body ?? {}))
-              .timeout(const Duration(seconds: 15));
+              .timeout(timeout);
           break;
         case 'PUT':
           response = await http
               .put(url, headers: headers, body: jsonEncode(body ?? {}))
-              .timeout(const Duration(seconds: 15));
+              .timeout(timeout);
           break;
         case 'DELETE':
           response = await http
               .delete(url, headers: headers)
-              .timeout(const Duration(seconds: 15));
+              .timeout(timeout);
           break;
         case 'GET':
         default:
           response = await http
               .get(url, headers: headers)
-              .timeout(const Duration(seconds: 15));
+              .timeout(timeout);
           break;
       }
     } catch (e) {
       throw ApiException(
-        'Failed to connect to server ($url). Make sure the backend server is running.\nDetails: $e',
+        'Unable to reach server ($url). If the server was idle, Render may take ~30s to spin up. Details: $e',
       );
     }
 
@@ -145,8 +151,8 @@ class ApiService {
     String? occupationType,
   }) async {
     final data = <String, dynamic>{
-      'name': name,
-      'email': email,
+      'name': name.trim(),
+      'email': email.trim().toLowerCase(),
       'password': password,
     };
     if (contactNumber != null && contactNumber.isNotEmpty) {
@@ -181,7 +187,7 @@ class ApiService {
     final res = await _request(
       '/auth/login',
       method: 'POST',
-      body: {'email': email, 'password': password},
+      body: {'email': email.trim().toLowerCase(), 'password': password},
       requireAuth: false,
     );
 
@@ -197,13 +203,28 @@ class ApiService {
     await _storageService.removeToken();
   }
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _request(
+      '/auth/change-password',
+      method: 'PUT',
+      body: {'currentPassword': currentPassword, 'newPassword': newPassword},
+    );
+  }
+
   Future<User> getCurrentUser() async {
     final res = await _request('/auth/me');
     if (res is Map<String, dynamic>) {
       if (res.containsKey('user') && res['user'] is Map<String, dynamic>) {
-        return User.fromJson(res['user']);
+        final user = User.fromJson(res['user']);
+        await _storageService.cacheUser(user);
+        return user;
       }
-      return User.fromJson(res);
+      final user = User.fromJson(res);
+      await _storageService.cacheUser(user);
+      return user;
     }
     throw ApiException('Failed to parse user profile');
   }
@@ -216,9 +237,13 @@ class ApiService {
     );
     if (res is Map<String, dynamic>) {
       if (res.containsKey('user') && res['user'] is Map<String, dynamic>) {
-        return User.fromJson(res['user']);
+        final user = User.fromJson(res['user']);
+        await _storageService.cacheUser(user);
+        return user;
       }
-      return User.fromJson(res);
+      final user = User.fromJson(res);
+      await _storageService.cacheUser(user);
+      return user;
     }
     throw ApiException('Failed to update income');
   }
@@ -226,19 +251,22 @@ class ApiService {
   // ---------- TRANSACTIONS ----------
   Future<List<TransactionModel>> getTransactions() async {
     final res = await _request('/transactions');
+    List<TransactionModel> txList = [];
     if (res is List) {
-      return res
+      txList = res
           .map((item) => TransactionModel.fromJson(item as Map<String, dynamic>))
           .toList();
     } else if (res is Map<String, dynamic>) {
       final list = res['transactions'] ?? res['data'];
       if (list is List) {
-        return list
+        txList = list
             .map((item) => TransactionModel.fromJson(item as Map<String, dynamic>))
             .toList();
       }
     }
-    return [];
+    // Update local cache
+    await _storageService.cacheTransactions(txList);
+    return txList;
   }
 
   Future<TransactionModel> createTransaction({

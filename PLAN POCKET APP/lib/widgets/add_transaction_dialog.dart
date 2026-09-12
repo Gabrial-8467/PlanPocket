@@ -16,7 +16,7 @@ class _AddTransactionDialogState extends State<AddTransactionDialog> {
   String _type = 'expense';
   final _descController = TextEditingController();
   final _amountController = TextEditingController();
-  final _categoryController = TextEditingController();
+  String _selectedCategory = '';
   DateTime _selectedDate = DateTime.now();
   bool _isSubmitting = false;
 
@@ -45,14 +45,13 @@ class _AddTransactionDialogState extends State<AddTransactionDialog> {
   @override
   void initState() {
     super.initState();
-    _categoryController.text = _expenseCategories.first;
+    _selectedCategory = _expenseCategories.first;
   }
 
   @override
   void dispose() {
     _descController.dispose();
     _amountController.dispose();
-    _categoryController.dispose();
     super.dispose();
   }
 
@@ -72,9 +71,11 @@ class _AddTransactionDialogState extends State<AddTransactionDialog> {
     try {
       await Provider.of<AppProvider>(context, listen: false).addTransaction(
         type: _type,
-        category: _categoryController.text.trim(),
+        category: _selectedCategory,
         amount: amount,
-        description: _descController.text.trim(),
+        description: _descController.text.trim().isNotEmpty
+            ? _descController.text.trim()
+            : _selectedCategory,
         date: _selectedDate,
       );
 
@@ -154,7 +155,7 @@ class _AddTransactionDialogState extends State<AddTransactionDialog> {
                         onTap: () {
                           setState(() {
                             _type = 'expense';
-                            _categoryController.text = _expenseCategories.first;
+                            _selectedCategory = _expenseCategories.first;
                           });
                         },
                         child: AnimatedContainer(
@@ -185,7 +186,7 @@ class _AddTransactionDialogState extends State<AddTransactionDialog> {
                         onTap: () {
                           setState(() {
                             _type = 'income';
-                            _categoryController.text = _incomeCategories.first;
+                            _selectedCategory = _incomeCategories.first;
                           });
                         },
                         child: AnimatedContainer(
@@ -214,16 +215,14 @@ class _AddTransactionDialogState extends State<AddTransactionDialog> {
                 ),
                 const SizedBox(height: 16),
 
-                // Description Field
+                // Description Field (Optional)
                 TextFormField(
                   controller: _descController,
                   decoration: const InputDecoration(
-                    labelText: 'Description',
-                    hintText: 'e.g. Grocery shopping or Salary',
+                    labelText: 'Description (Optional)',
+                    hintText: 'e.g. Grocery shopping or Dinner',
                     prefixIcon: Icon(Icons.description, color: AppTheme.textMuted),
                   ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Description is required' : null,
                 ),
                 const SizedBox(height: 14),
 
@@ -247,8 +246,9 @@ class _AddTransactionDialogState extends State<AddTransactionDialog> {
 
                 // Category Field (Dropdown)
                 DropdownButtonFormField<String>(
-                  initialValue: categories.contains(_categoryController.text)
-                      ? _categoryController.text
+                  key: ValueKey('category-$_type'),
+                  initialValue: categories.contains(_selectedCategory)
+                      ? _selectedCategory
                       : categories.first,
                   dropdownColor: AppTheme.surfaceLight,
                   decoration: const InputDecoration(
@@ -263,7 +263,7 @@ class _AddTransactionDialogState extends State<AddTransactionDialog> {
                       .toList(),
                   onChanged: (val) {
                     if (val != null) {
-                      setState(() => _categoryController.text = val);
+                      setState(() => _selectedCategory = val);
                     }
                   },
                 ),

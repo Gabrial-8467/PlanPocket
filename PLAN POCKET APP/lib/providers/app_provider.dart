@@ -11,7 +11,9 @@ class AppProvider with ChangeNotifier {
   User? _user;
   bool _isLoggedIn = false;
   bool _isLoading = false;
+  bool _isBackgroundSyncing = false;
   String? _error;
+  DateTime? _lastSyncTime;
 
   List<TransactionModel> _transactions = [];
 
@@ -27,7 +29,9 @@ class AppProvider with ChangeNotifier {
   User? get user => _user;
   bool get isLoggedIn => _isLoggedIn;
   bool get isLoading => _isLoading;
+  bool get isBackgroundSyncing => _isBackgroundSyncing;
   String? get error => _error;
+  DateTime? get lastSyncTime => _lastSyncTime;
   List<TransactionModel> get transactions => _transactions;
 
   double get monthlyIncome => _monthlyIncome;
@@ -81,29 +85,60 @@ class AppProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Instant startup with cached data, followed by background revalidation
   Future<void> checkAuth() async {
+    _isLoading = true;
     final hasToken = await _storageService.hasToken();
     if (!hasToken) {
       _isLoggedIn = false;
       _user = null;
+      _isLoading = false;
       notifyListeners();
       return;
     }
 
-    try {
+    // 1. FAST CACHE HYDRATION (<1ms)
+    final cachedUser = await _storageService.getCachedUser();
+    final cachedTx = await _storageService.getCachedTransactions();
+    _lastSyncTime = await _storageService.getLastSyncTime();
+
+    if (cachedUser != null) {
+      _user = cachedUser;
+      _transactions = cachedTx;
+      _isLoggedIn = true;
+      _calculateMetrics();
+      // Notify immediately so user sees UI instantly
+      notifyListeners();
+    } else {
       _isLoading = true;
       notifyListeners();
+    }
+
+    // 2. BACKGROUND SERVER REVALIDATION
+    _isBackgroundSyncing = true;
+    notifyListeners();
+
+    try {
       final currentUser = await _apiService.getCurrentUser();
       _user = currentUser;
       _isLoggedIn = true;
-      await loadDashboardData();
+      await loadDashboardData(silent: true);
+      _lastSyncTime = DateTime.now();
     } catch (e) {
-      // If token expired or unauthorized, log out cleanly
-      await _storageService.removeToken();
-      _user = null;
-      _isLoggedIn = false;
+      final isAuthError = e is ApiException &&
+          (e.statusCode == 401 ||
+              e.message.toLowerCase().contains('not authorized') ||
+              e.message.toLowerCase().contains('token is not valid'));
+      if (_user == null && isAuthError) {
+        // Expired/invalid token -> force clean logout
+        await _storageService.removeToken();
+        _user = null;
+        _isLoggedIn = false;
+        _error = null;
+      }
     } finally {
       _isLoading = false;
+      _isBackgroundSyncing = false;
       notifyListeners();
     }
   }
@@ -179,20 +214,27 @@ class AppProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadDashboardData() async {
+  Future<void> loadDashboardData({bool silent = false}) async {
     try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
+      if (!silent) {
+        _isLoading = true;
+        _error = null;
+        notifyListeners();
+      }
 
       final list = await _apiService.getTransactions();
       _transactions = list;
       _calculateMetrics();
+      _lastSyncTime = DateTime.now();
     } catch (e) {
-      _error = e.toString();
+      if (!silent || _transactions.isEmpty) {
+        _error = e.toString();
+      }
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!silent) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -216,6 +258,7 @@ class AppProvider with ChangeNotifier {
         date: date,
       );
       _transactions.insert(0, newTx);
+      await _storageService.cacheTransactions(_transactions);
       _calculateMetrics();
     } catch (e) {
       _error = e.toString();
@@ -234,6 +277,7 @@ class AppProvider with ChangeNotifier {
 
       await _apiService.deleteTransaction(id);
       _transactions.removeWhere((tx) => tx.id == id);
+      await _storageService.cacheTransactions(_transactions);
       _calculateMetrics();
     } catch (e) {
       _error = e.toString();
@@ -261,11 +305,27 @@ class AppProvider with ChangeNotifier {
     }
   }
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      _error = null;
+      await _apiService.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    }
+  }
+
   Future<String> getBaseUrl() => _apiService.getBaseUrl();
 
   Future<void> setBaseUrl(String url) async {
     await _apiService.setBaseUrl(url);
-    notifyListeners();
+    await loadDashboardData();
   }
 
   void clearError() {

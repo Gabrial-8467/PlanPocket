@@ -25,13 +25,17 @@ class ApiService {
             let data = null;
             try {
                 data = await response.json();
-            } catch (e) {
+            } catch {
                 // Non-JSON response
                 data = null;
             }
 
             if (!response.ok) {
-                const error = new Error((data && (data.message || data.msg)) || 'Request failed');
+                let message = (data && (data.message || data.msg)) || 'Request failed';
+                if (message === 'Request failed' && data?.errors && Array.isArray(data.errors)) {
+                    message = data.errors.map(e => e.msg || e.message).filter(Boolean).join(', ') || message;
+                }
+                const error = new Error(message);
                 error.status = response.status;
                 error.data = data;
                 throw error;

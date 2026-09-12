@@ -27,12 +27,17 @@ function Loans() {
         return monthlyPayment;
     };
 
-    const handleLoanSubmit = (e) => {
+    const handleLoanSubmit = async (e) => {
         e.preventDefault();
         const principal = parseFloat(loanForm.principal);
         const termMonths = parseFloat(loanForm.termMonths);
         const interestRate = parseFloat(loanForm.interestRate);
-        
+
+        if (!principal || !termMonths || !interestRate) {
+            alert('Please fill in principal, term, and interest rate.');
+            return;
+        }
+
         // Backend expects principal, interestRate, termMonths. Persist name in notes.
         const loanData = {
             principal: principal,
@@ -40,17 +45,20 @@ function Loans() {
             termMonths: termMonths,
             ...(loanForm.name?.trim() ? { name: loanForm.name.trim(), notes: loanForm.name.trim() } : {})
         };
-        
-        addLoan(loanData);
-        
-        setLoanForm({
-            name: '',
-            principal: '',
-            remainingBalance: '',
-            termMonths: '',
-            interestRate: ''
-        });
-        setShowAddLoan(false);
+
+        try {
+            await addLoan(loanData);
+            setLoanForm({
+                name: '',
+                principal: '',
+                remainingBalance: '',
+                termMonths: '',
+                interestRate: ''
+            });
+            setShowAddLoan(false);
+        } catch (err) {
+            alert('Error adding loan: ' + (err?.message || 'Please try again.'));
+        }
     };
 
     const formatCurrency = (amount) => {

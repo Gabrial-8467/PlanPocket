@@ -35,15 +35,25 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
+      final email = _emailController.text.trim().toLowerCase();
+      final password = _passwordController.text.trim();
       await Provider.of<AppProvider>(context, listen: false).login(
-        _emailController.text.trim(),
-        _passwordController.text,
+        email,
+        password,
       );
-      // Navigation is handled reactively by checking Provider.isLoggedIn in Root
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          final err = e.toString().replaceAll('Exception: ', '').replaceAll('ApiException: ', '');
+          if (err.toLowerCase().contains('invalid credentials')) {
+            _errorMessage = 'Invalid email or password. Please check your credentials or create a new account.';
+          } else if (err.toLowerCase().contains('unable to reach') ||
+              err.toLowerCase().contains('failed host lookup') ||
+              err.toLowerCase().contains('socketexception')) {
+            _errorMessage = 'Cannot reach backend server. Please verify your internet connection.';
+          } else {
+            _errorMessage = err;
+          }
         });
       }
     } finally {
@@ -53,69 +63,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _showServerSettingsDialog() async {
-    final provider = Provider.of<AppProvider>(context, listen: false);
-    final currentUrl = await provider.getBaseUrl();
-    final urlController = TextEditingController(text: currentUrl);
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Text('API Server URL', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Default for Android Emulator is http://10.0.2.2:5000/api.\nDefault for Linux/Web is http://127.0.0.1:5000/api.',
-              style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: urlController,
-              decoration: const InputDecoration(
-                labelText: 'Backend URL',
-                hintText: 'http://127.0.0.1:5000/api',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newUrl = urlController.text.trim();
-              if (newUrl.isNotEmpty) {
-                await provider.setBaseUrl(newUrl);
-              }
-              if (ctx.mounted) Navigator.of(ctx).pop();
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: AppTheme.textMuted),
-            tooltip: 'Configure Backend URL',
-            onPressed: _showServerSettingsDialog,
-          ),
-        ],
-      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -129,16 +79,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Logo & Brand
                   Center(
                     child: Container(
-                      width: 64,
-                      height: 64,
                       decoration: BoxDecoration(
-                        color: AppTheme.warningYellow.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.18),
+                            blurRadius: 20,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      child: const Icon(
-                        Icons.savings_rounded,
-                        color: AppTheme.warningYellow,
-                        size: 38,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.asset(
+                          'assets/icon/splash_icon.png',
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),

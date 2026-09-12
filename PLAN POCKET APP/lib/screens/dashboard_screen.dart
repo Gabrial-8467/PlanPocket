@@ -52,6 +52,36 @@ class DashboardScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Background Sync Indicator
+                if (provider.isBackgroundSyncing) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.primaryBlueLight,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Syncing with cloud...',
+                          style: TextStyle(color: AppTheme.primaryBlueLight, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
                 // Error Alert if any
                 if (provider.error != null) ...[
                   Container(

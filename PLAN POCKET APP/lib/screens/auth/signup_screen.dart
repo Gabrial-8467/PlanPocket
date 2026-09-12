@@ -81,7 +81,7 @@ class _SignupScreenState extends State<SignupScreen> {
     try {
       await Provider.of<AppProvider>(context, listen: false).register(
         name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
+        email: _emailController.text.trim().toLowerCase(),
         password: _passwordController.text,
         contactNumber: _contactController.text.trim(),
         address: _addressController.text.trim(),
@@ -127,16 +127,25 @@ class _SignupScreenState extends State<SignupScreen> {
                   // Header
                   Center(
                     child: Container(
-                      width: 56,
-                      height: 56,
                       decoration: BoxDecoration(
-                        color: AppTheme.warningYellow.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.16),
+                            blurRadius: 18,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      child: const Icon(
-                        Icons.savings_rounded,
-                        color: AppTheme.warningYellow,
-                        size: 32,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: Image.asset(
+                          'assets/icon/splash_icon.png',
+                          width: 72,
+                          height: 72,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),

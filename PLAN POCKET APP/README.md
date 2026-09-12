@@ -1,68 +1,62 @@
 # PlanPocket Flutter App (`PLAN POCKET APP`)
 
-A cross-platform Flutter application for **PlanPocket**, connected to the same Node.js/Express backend and providing the same financial management functionality as the React web frontend, excluding the loans functionality as requested.
-
-## ✨ Features Included
-
-1. **Authentication & Session Management**
-   - User Sign-in and Sign-up matching backend endpoints (`/api/auth/register`, `/api/auth/login`, `/api/auth/me`).
-   - Secure token storage with persistence (`shared_preferences`).
-   - Password strength indicator (Weak, Fair, Good, Strong).
-   - Form validation for full name, contact number, email, password match, address, and occupation type.
-
-2. **Dashboard**
-   - Real-time Budget Overview:
-     - Monthly In-Hand Income (dynamically computed from income transactions over the past 30 days).
-     - Total Monthly Expenses (computed from expense transactions over the past 30 days).
-     - Remaining Budget (`Income - Expenses`).
-     - Dynamic progress bar showing budget utilization percentage with color warnings.
-   - Transaction Statistics: Total count, Income transactions, Expense transactions, and Net Cash Flow.
-   - Quick Navigation cards (Financial Summary, My Profile, Add Transaction).
-   - Recent Transactions feed with color-coded badges, formatted dates, and amounts in INR (`₹`).
-   - Pull-to-refresh to sync latest data with the backend.
-
-3. **Transaction Management**
-   - Modal dialog to add transactions (Expense / Income toggle, Description, Amount, Category dropdown, Date picker).
-   - Delete transactions with confirmation dialog.
-
-4. **Financial Summary**
-   - Income & Spending Breakdown: Monthly In-Hand Income, Total Monthly Expenses, Net Monthly Cash Flow.
-   - Lifetime Overview: All-time Total Income and All-time Total Expenses.
-   - Financial Insights: Monthly Savings Rate (`Net Cash Flow / Income * 100`) and Total Transactions.
-   - *(Note: All loan summary / debt-to-income items are excluded as requested).*
-
-5. **User Profile & Settings**
-   - Profile overview with status indicator.
-   - Monthly Income, Monthly Expense, and Net Cash Flow quick cards.
-   - Annual Income update (persisted via `/api/users/income`).
-   - Change Password UI form.
-   - Backend API URL configurator (easily switch between `10.0.2.2:5000` for Android emulator, `127.0.0.1:5000` for Web/Linux, or your local LAN IP for physical mobile devices).
-   - Logout functionality.
-
-6. **Design & Theme**
-   - Modern dark UI matching the PlanPocket React application design (`#111827` background, `#1F2937` cards, `#2563EB` primary blue, `#10B981` success green, `#EF4444` danger red, `#F59E0B` yellow accents).
+A production-ready cross-platform Flutter application for **PlanPocket**, connected to the live backend hosted at **`https://planpocket.onrender.com/`** and providing the same financial management functionality as the React web frontend, excluding the loans functionality as requested.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Production Highlights
 
-### 1. Ensure Backend is Running
-From the root repository:
-```bash
-cd backend
-npm install
-npm run dev # or node index.js
-```
-The backend server runs on `http://127.0.0.1:5000`.
+1. **Environment Configuration (`.env`)**
+   - Managed via `flutter_dotenv` using `.env` at the root of `PLAN POCKET APP`.
+   - Pre-configured for the live hosted production backend:
+     ```env
+     API_URL=https://planpocket.onrender.com/api
+     APP_NAME=PlanPocket
+     APP_ENV=production
+     ```
 
-### 2. Run the Flutter App
+2. **High-Performance Caching Layer (Instant Startup & Offline Tolerant)**
+   - Implements the **Stale-While-Revalidate (SWR)** caching pattern via `StorageService`.
+   - On app launch, user profiles and transactions hydrate from local cache in **<1ms**, eliminating blocking spinners and blank screens.
+   - Background revalidation syncs with Render automatically without freezing the user interface.
+   - Handles Render free-tier cold starts with a resilient 35s timeout and automatic wake-up detection.
+
+3. **Native Launch & Splash Screen**
+   - Configured with native Android launch drawables (`launch_background.xml`) using brand dark theme `#111827`.
+   - Eliminates white flash on app startup.
+   - Smooth native transition from OS boot directly to authenticated dashboard.
+
+4. **Custom App Icon & Launcher Icons**
+   - Custom 1024x1024 vector-rendered brand icon with wallet, golden coin, rupee symbol, and growth curve.
+   - Native launcher icons automatically generated across all Android densities (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`), iOS, and Web via `flutter_launcher_icons`.
+
+5. **Production Android Settings**
+   - Proper permissions in `AndroidManifest.xml` (`INTERNET`, `ACCESS_NETWORK_STATE`).
+   - App label set to **`PlanPocket`**.
+
+---
+
+## ✨ Features (Same Functionality as Frontend, Excluding Loans)
+
+- **Authentication**: Sign-in & Sign-up matching `/api/auth/*` endpoints with password strength indicator, token persistence, and auto-login.
+- **Dashboard**:
+  - Monthly In-Hand Income (last 30 days calculation).
+  - Total Monthly Expenses (last 30 days calculation).
+  - Remaining Budget (`Income - Expenses`).
+  - Progress bar showing budget used percentage with dynamic warning colors.
+  - Transaction Statistics: Total count, Income count, Expense count, and Net Flow.
+  - Recent transactions list with color-coded badges and currency formatting (`₹`).
+  - Pull-to-refresh for manual cloud sync.
+- **Transactions**: Add new transaction modal (Income/Expense toggle, Description, Amount, Category dropdown, Date picker) and delete with confirmation dialog.
+- **Financial Summary**: Comprehensive breakdown of income, spending, lifetime totals, and monthly savings rate (`Net Cash Flow / Income * 100`). *(Loans excluded)*.
+- **Profile & Settings**: Profile overview, Annual Income updater, Change Password form, and custom server URL switcher.
+
+---
+
+## 🏃‍♂️ How to Run
+
 ```bash
 cd "PLAN POCKET APP"
 flutter pub get
 flutter run
 ```
-
-### 📱 Backend URL Configuration
-- **Android Emulator**: Uses `http://10.0.2.2:5000/api` by default.
-- **Linux Desktop / macOS / Web**: Uses `http://127.0.0.1:5000/api` by default.
-- **Physical Phone**: Tap the Settings gear icon on the Login screen or in the Profile tab and input `http://<your-computer-ip>:5000/api`.

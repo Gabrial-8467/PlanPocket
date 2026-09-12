@@ -71,10 +71,11 @@ function Dashboard() {
 
     const handleTransactionSubmit = async (e) => {
         e.preventDefault();
-        if (transactionForm.description && transactionForm.amount && transactionForm.category) {
+        if (transactionForm.amount && transactionForm.category) {
             try {
                 await addTransaction({
                     ...transactionForm,
+                    description: transactionForm.description.trim() || transactionForm.category,
                     amount: parseFloat(transactionForm.amount),
                     date: new Date().toISOString()
                 });
@@ -326,7 +327,7 @@ function Dashboard() {
                             <div className="grid grid-cols-2 gap-4 mb-4">
                                 <input
                                     type="text"
-                                    placeholder="Description"
+                                    placeholder="Description (Optional)"
                                     value={transactionForm.description}
                                     onChange={(e) => setTransactionForm({...transactionForm, description: e.target.value})}
                                     className="px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -388,7 +389,7 @@ function Dashboard() {
                                         transaction.type === 'income' ? 'bg-green-500' : 'bg-red-500'
                                     }`}></div>
                                     <div>
-                                        <p className="text-white font-semibold">{transaction.description}</p>
+                                        <p className="text-white font-semibold">{transaction.description || transaction.category}</p>
                                         <p className="text-gray-400 text-sm">{transaction.category}</p>
                                     </div>
                                 </div>

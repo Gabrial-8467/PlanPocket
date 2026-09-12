@@ -38,12 +38,14 @@ class TransactionModel {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'type': type,
       'category': category,
       'amount': amount,
       'description': description,
       'notes': description,
       'date': date.toIso8601String(),
+      'createdAt': createdAt?.toIso8601String(),
     };
   }
 }

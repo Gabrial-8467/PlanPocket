@@ -20,6 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _showPasswordFields = false;
+  bool _isSavingPassword = false;
 
   @override
   void dispose() {
@@ -58,57 +59,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showServerSettingsDialog(BuildContext context) async {
-    final provider = Provider.of<AppProvider>(context, listen: false);
-    final currentUrl = await provider.getBaseUrl();
-    final urlController = TextEditingController(text: currentUrl);
-
-    if (!context.mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Text('API Server Settings', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Specify backend URL (e.g. http://10.0.2.2:5000/api for emulator or http://192.168.x.x:5000/api for real device):',
-              style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: urlController,
-              decoration: const InputDecoration(labelText: 'Backend URL'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newUrl = urlController.text.trim();
-              if (newUrl.isNotEmpty) {
-                await provider.setBaseUrl(newUrl);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Server URL updated')),
-                  );
-                }
-              }
-              if (ctx.mounted) Navigator.of(ctx).pop();
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _handleSaveIncome() async {
     final income = double.tryParse(_incomeController.text.trim());
@@ -143,6 +93,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } finally {
       if (mounted) {
         setState(() => _isSavingIncome = false);
+      }
+    }
+  }
+
+  Future<void> _handleChangePassword() async {
+    final current = _currentPasswordController.text;
+    final newPassword = _newPasswordController.text;
+    final confirm = _confirmPasswordController.text;
+
+    if (current.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your current password')),
+      );
+      return;
+    }
+    if (newPassword.isEmpty || newPassword.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('New password must be at least 6 characters')),
+      );
+      return;
+    }
+    if (newPassword != confirm) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('New passwords do not match')),
+      );
+      return;
+    }
+
+    setState(() => _isSavingPassword = true);
+    try {
+      await Provider.of<AppProvider>(context, listen: false).changePassword(
+        currentPassword: current,
+        newPassword: newPassword,
+      );
+      if (!mounted) return;
+      _currentPasswordController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
+      setState(() => _showPasswordFields = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppTheme.successGreenDark,
+          content: Text('Password updated successfully!'),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        final msg = e.toString().replaceAll('Exception: ', '').replaceAll('ApiException: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppTheme.dangerRedDark,
+            content: Text('Failed to change password: $msg'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingPassword = false);
       }
     }
   }
@@ -535,39 +543,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Password change feature coming soon!'),
-                            ),
-                          );
-                        },
+                        onPressed: _isSavingPassword ? null : _handleChangePassword,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.warningYellowDark,
                         ),
-                        child: const Text('Change Password'),
+                        child: _isSavingPassword
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Change Password'),
                       ),
                     ],
                   ],
                 ),
-              ),
-              const SizedBox(height: 20),
-
-              // Settings & Server Configuration
-              ListTile(
-                tileColor: AppTheme.surface,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                leading: const Icon(Icons.dns_outlined, color: AppTheme.primaryBlueLight),
-                title: const Text('Backend API Server', style: TextStyle(color: Colors.white)),
-                subtitle: FutureBuilder<String>(
-                  future: provider.getBaseUrl(),
-                  builder: (_, snapshot) => Text(
-                    snapshot.data ?? 'Loading...',
-                    style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
-                  ),
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.textMuted),
-                onTap: () => _showServerSettingsDialog(context),
               ),
               const SizedBox(height: 24),
 

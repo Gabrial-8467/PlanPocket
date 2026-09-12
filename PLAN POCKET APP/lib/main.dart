@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'providers/app_provider.dart';
 import 'screens/auth/login_screen.dart';
@@ -6,8 +7,14 @@ import 'screens/auth/signup_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Note: .env not found or error loading: $e");
+  }
+
   runApp(
     MultiProvider(
       providers: [
@@ -27,7 +34,7 @@ class PlanPocketApp extends StatelessWidget {
       title: 'PlanPocket',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const AuthGate(),
+      home: const NativeAuthScreen(),
       routes: {
         '/login': (_) => const LoginScreen(),
         '/signup': (_) => const SignupScreen(),
@@ -37,47 +44,80 @@ class PlanPocketApp extends StatelessWidget {
   }
 }
 
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
+/// Native Flutter transition & auth gate screen
+class NativeAuthScreen extends StatelessWidget {
+  const NativeAuthScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppProvider>(
       builder: (context, provider, _) {
-        // Initial auth checking
+        // If logged in (instant from cache or verified token), jump directly to Main Navigation
+        if (provider.isLoggedIn) {
+          return const MainNavigationScreen();
+        }
+
+        // Show native splash screen only during cold start when not yet determined
         if (provider.isLoading && provider.user == null) {
-          return const Scaffold(
+          return Scaffold(
             backgroundColor: AppTheme.background,
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.savings_rounded,
-                    color: AppTheme.warningYellow,
-                    size: 64,
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.22),
+                          blurRadius: 28,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset(
+                        'assets/icon/splash_icon.png',
+                        width: 104,
+                        height: 104,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
-                  SizedBox(height: 20),
-                  Text(
+                  const SizedBox(height: 24),
+                  const Text(
                     'PlanPocket',
                     style: TextStyle(
-                      fontSize: 30,
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
                       color: AppTheme.textPrimary,
                     ),
                   ),
-                  SizedBox(height: 20),
-                  CircularProgressIndicator(
-                    color: AppTheme.primaryBlueLight,
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Smart Personal Finance',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 36),
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppTheme.primaryBlueLight,
+                    ),
                   ),
                 ],
               ),
             ),
           );
-        }
-
-        if (provider.isLoggedIn) {
-          return const MainNavigationScreen();
         }
 
         return const LoginScreen();
