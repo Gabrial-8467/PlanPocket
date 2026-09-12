@@ -47,7 +47,7 @@ void main() {
     // 5th tap within 2 seconds -> Triggers Easter Egg
     await tester.tap(logoFinder);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump(const Duration(milliseconds: 1000));
 
     expect(find.text('Gabrial Deora'), findsOneWidget);
     expect(find.text('Creator & Lead Engineer'), findsOneWidget);
